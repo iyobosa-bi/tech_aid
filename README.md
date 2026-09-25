@@ -49,16 +49,3 @@ of sending them — check there for the OTP code during login.
 ```bash
 php artisan test
 ```
-
-## Project docs
-
-The `docs/` folder holds the working product spec and is kept up to date as
-features are built:
-
-- [01-PRD.md](docs/01-PRD.md) — product requirements
-- [02-features.md](docs/02-features.md) — feature list and build order
-- [03-user-flows.md](docs/03-user-flows.md) — step-by-step user flows
-- [04-tech-stack.md](docs/04-tech-stack.md) — tech stack and security notes
-- [06-data-model.md](docs/06-data-model.md) — database schema
-
-`design/style-notes.md` is the source of truth for the visual design.
