@@ -52,7 +52,7 @@ class AuthenticatedSessionController extends Controller
      * state (and its unexpired code) in place — which is what let a wrong
      * password still open the modal and let any leftover code log in.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(LoginRequest $request): JsonResponse
     {
         
         $this->clearPendingOtp($request);
@@ -62,9 +62,15 @@ class AuthenticatedSessionController extends Controller
         $this->issueOtp($user);
         
         $request->session()->put('login.otp.user_id', $user->id);
-        $request->session()->flash('otp_pending', true);
+        // $request->session()->flash('otp_pending', true);
 
-        return redirect()->route('login');
+        // return redirect()->route('login');
+        return response()->json([
+            'success' => true,
+            'otp_pending' => true,
+        ]);
+
+
     }
 
     /**

@@ -1,7 +1,9 @@
 @extends('layouts.guest', ['title' => 'Login — Tech Aid'])
 
 @section('content')
-<div x-data="loginPage({{ $otpPending ?? false ? 'true' : 'false' }})"
+
+
+<div x-data="loginPage()"
      class="h-full flex"
 >
     <div
@@ -85,13 +87,21 @@
                     Sign in to Tech Aid
                 </h2>
 
-                @if ($errors->any())
+                {{-- @if ($errors->any())
                     <div class="mb-5 px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg">
                         <p class="text-xs text-red-600">{{ $errors->first() }}</p>
                     </div>
-                @endif
+                @endif --}}
 
-                <form method="POST" action="{{ route('login') }}" class="space-y-5">
+                <div
+                    x-show="loginError"
+                    x-cloak
+                    class="mb-5 px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg"
+                >
+                  <p x-text="loginError" class="text-xs text-red-600"></p>
+                </div>
+
+                <form method="POST" action="{{ route('login') }}" class="space-y-5" @submit.prevent="login()">
                     @csrf
 
                     <div>
@@ -128,11 +138,20 @@
                         </div>
                     </div>
 
-                    <button
+                    {{-- <button
                         type="submit"
                         class="w-full bg-gray-400 hover:bg-gray-500 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors mt-2"
                     >
                         Login
+                    </button> --}}
+
+                    <button
+                        type="submit"
+                        :disabled="loggingIn"
+                        class="w-full bg-gray-400 hover:bg-gray-500 disabled:opacity-60 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors mt-2"
+                        >
+                        <span x-show="!loggingIn">Login</span>
+                        <span x-show="loggingIn" x-cloak>Signing in…</span>
                     </button>
                 </form>
             </div>
@@ -185,9 +204,9 @@
 </div>
 
 <script>
-    function loginPage(otpPending) {
+    function loginPage() {
         return {
-            otpOpen: otpPending,
+            otpOpen: false,
             code: ['', '', '', '', '', ''],
             showPw: false,
             revealed: false,
@@ -195,6 +214,8 @@
             resending: false,
             otpError: '',
             resendMessage: '',
+            loggingIn: false,
+            loginError:'',
 
             init() {
                 setTimeout(() => this.revealed = true, 100);
@@ -224,6 +245,55 @@
                     this.focusDigit(i - 1);
                 }
             },
+
+            async login() {
+                this.loginError = '';
+                this.otpError = '';
+                this.resendMessage = '';
+                this.loggingIn = true;
+
+                try {
+                    const form = this.$root.querySelector('form');
+                    const formData = new FormData(form);
+
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': this.csrfToken(),
+                        },
+                        body: formData,
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        this.loginError =
+                            data.message ||
+                            data.errors?.email?.[0] ||
+                            'Invalid email or password.';
+
+                        return;
+                    }
+
+                    this.otpOpen = true;
+                    this.code = ['', '', '', '', '', ''];
+                    this.loginError = '';
+
+                    this.$nextTick(() => {
+                        this.focusDigit(0);
+                    });
+
+                } catch (e) {
+                    this.loginError = 'Something went wrong. Please try again.';
+                } finally {
+                    this.loggingIn = false;
+                }
+            },
+
+
+
+
 
             async verify() {
                 this.otpError = '';
