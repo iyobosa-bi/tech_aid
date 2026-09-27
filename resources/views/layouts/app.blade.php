@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
     <title>{{ $title ?? 'Tech Aid' }}</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -34,6 +35,7 @@
         html, body{ height: 100%; margin: 0; }
         body{ font-family: 'Poppins', system-ui, sans-serif; background: #f6f7fb; }
     </style>
+    @stack('head')
 </head>
 <body class="h-full overflow-hidden">
 
@@ -162,6 +164,15 @@
         </div>
 
         <div class="p-5 sm:p-8">
+            @if (session('success'))
+                <div x-data="{ show: true }" x-show="show" class="mb-6 flex items-start gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-lg">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-green-600 mt-0.5 shrink-0"></i>
+                    <p class="flex-1 text-sm text-green-700">{{ session('success') }}</p>
+                    <button type="button" @click="show = false" class="text-green-600/60 hover:text-green-700">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            @endif
             {{ $slot ?? '' }}
             @yield('content')
         </div>
@@ -178,7 +189,7 @@
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) window.location.reload();
     });
-    
 </script>
+@stack('scripts')
 </body>
 </html>

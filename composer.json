@@ -13,6 +13,7 @@
         "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {
+        "albertoarena/laravel-truss": "*",
         "fakerphp/faker": "^1.23",
         "laravel/boost": "^2.10",
         "laravel/breeze": "^2.4",

@@ -110,10 +110,13 @@ class AuthenticatedSessionController extends Controller
         Auth::login($user);
         $request->session()->forget('login.otp.user_id');
         $request->session()->regenerate();
-
+         
+        
         return response()->json([
             'redirect' => route('dashboard'),
         ]);
+
+
     }
 
     /**

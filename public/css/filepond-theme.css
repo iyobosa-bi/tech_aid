@@ -1,0 +1,45 @@
+/* FilePond restyled to the Tech Aid palette (design/style-notes.md). */
+.filepond--root {
+    font-family: 'Poppins', system-ui, sans-serif;
+    margin-bottom: 0;
+}
+
+.filepond--panel-root {
+    background-color: #f9fafb;
+    border: 1.5px dashed #d1d5db;
+    border-radius: 0.5rem;
+}
+
+.filepond--root:hover .filepond--panel-root {
+    border-color: #152a9e;
+}
+
+.filepond--drop-label {
+    color: #6b7280;
+    font-size: 0.8125rem;
+    min-height: 5.5rem;
+}
+
+.filepond--label-action {
+    color: #152a9e;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.filepond--item-panel {
+    background-color: #152a9e;
+    border-radius: 0.5rem;
+}
+
+[data-filepond-item-state='processing-complete'] .filepond--item-panel {
+    background-color: #16a34a;
+}
+
+[data-filepond-item-state*='error'] .filepond--item-panel,
+[data-filepond-item-state*='invalid'] .filepond--item-panel {
+    background-color: #dc2626;
+}
+
+.filepond--file {
+    font-size: 0.75rem;
+}

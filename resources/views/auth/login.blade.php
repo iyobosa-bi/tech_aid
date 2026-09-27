@@ -78,17 +78,13 @@
         </div>
 
         <div
-            x-show="revealed"
-            x-transition:enter="transition ease-out duration-500 delay-150"
-            x-transition:enter-start="opacity-0 translate-y-3"
-            x-transition:enter-end="opacity-100 translate-y-0"
+        
             class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] sm:w-full max-w-[440px] mx-auto sm:mx-4"
         >
             <div class="bg-white rounded-xl shadow-2xl p-6 sm:p-8">
                 <h2 class="font-display font-bold text-brand text-lg mb-6">
                     Sign in to Tech Aid
                 </h2>
-
                 <div
                     x-show="loginError"
                     x-cloak
