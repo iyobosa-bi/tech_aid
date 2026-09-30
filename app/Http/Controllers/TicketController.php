@@ -25,6 +25,8 @@ class TicketController extends Controller
         $data = [
             'tickets' => $tickets->paginateVisibleTo($request->user(), $filters),
             'filters' => $filters,
+            // Requesters only see their own tickets, so the column would just repeat their name.
+            'showRequester' => $request->user()->handlesTickets(),
         ];
 
         // Live search swaps only the results region, so skip the full layout.

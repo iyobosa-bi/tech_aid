@@ -1,24 +1,40 @@
+@use('App\Enums\TicketCategory')
+@use('App\Enums\TicketPriority')
 @php
     $hasFilters = $filters['search'] !== '' || $filters['status'];
     $canOpen = Route::has('tickets.show');
 
-    $columns = [
-        'id' => ['label' => 'Ticket', 'class' => 'pl-5 pr-3'],
-        'requester' => ['label' => 'Requester', 'class' => 'px-3 hidden md:table-cell'],
-        'title' => ['label' => 'Title', 'class' => 'px-3', 'sortable' => false],
-        'status' => ['label' => 'Status', 'class' => 'px-3'],
-        'created_at' => ['label' => 'Opened', 'class' => 'pl-3 pr-5 hidden sm:table-cell'],
-    ];
+    // Every column stays visible; narrow screens scroll the table sideways instead.
+    // The ticket ID column is pinned so rows stay identifiable while scrolling.
+    $sticky = 'sticky left-0 z-10 shadow-[1px_0_0_0_#f3f4f6]';
+
+    $columns = array_filter([
+        'id' => ['label' => 'Ticket', 'class' => "pl-5 pr-3.5 {$sticky} bg-gray-50"],
+        'requester' => $showRequester ? ['label' => 'Requester', 'class' => 'px-3.5'] : null,
+        'title' => ['label' => 'Title', 'class' => 'px-3.5', 'sortable' => false],
+        'category' => ['label' => 'Category', 'class' => 'px-3.5'],
+        'priority' => ['label' => 'Priority', 'class' => 'px-3.5'],
+        'assignee' => ['label' => 'Assigned to', 'class' => 'px-3.5', 'sortable' => false],
+        'status' => ['label' => 'Status', 'class' => 'px-3.5'],
+        'created_at' => ['label' => 'Opened', 'class' => 'pl-3.5 pr-5'],
+    ]);
 
     $sortUrl = function (string $column) use ($filters) {
         $direction = $filters['sort'] === $column
             ? ($filters['direction'] === 'asc' ? 'desc' : 'asc')
-            : ($column === 'created_at' ? 'desc' : 'asc');
+            : (in_array($column, ['created_at', 'priority'], true) ? 'desc' : 'asc');
 
         return request()->fullUrlWithQuery(['sort' => $column, 'direction' => $direction, 'page' => null]);
     };
 
-    $priorityDot = ['high' => 'bg-red-500', 'medium' => 'bg-amber-400', 'low' => 'bg-gray-300'];
+    $initials = fn (string $name) => collect(explode(' ', $name))->filter()->take(2)
+        ->map(fn ($part) => mb_strtoupper(mb_substr($part, 0, 1)))->join('');
+
+    $priorityStyles = [
+        'high' => ['dot' => 'bg-red-500', 'text' => 'text-red-600'],
+        'medium' => ['dot' => 'bg-amber-400', 'text' => 'text-amber-700'],
+        'low' => ['dot' => 'bg-gray-300', 'text' => 'text-gray-500'],
+    ];
 @endphp
 
 @if ($tickets->isEmpty())
@@ -51,10 +67,12 @@
         @endif
     </div>
 @else
-    <div class="overflow-x-auto">
+    {{-- Auto table layout: spare width is shared out; when space runs short the title wraps/shrinks first
+         (every other column is nowrap), and only once it hits its min width does the wrapper scroll. --}}
+    <div class="overflow-x-auto overscroll-x-contain [scrollbar-width:thin]">
         <table class="w-full text-sm">
             <thead>
-                <tr class="border-b border-gray-100 bg-gray-50/60">
+                <tr class="border-b border-gray-100 bg-gray-50">
                     @foreach ($columns as $key => $column)
                         @php $active = $filters['sort'] === $key; @endphp
                         <th scope="col" class="{{ $column['class'] }} py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400 whitespace-nowrap"
@@ -80,39 +98,67 @@
                 @foreach ($tickets as $ticket)
                     @php
                         $requesterName = $ticket->requester?->name ?? 'Unknown';
-                        $initials = collect(explode(' ', $requesterName))->filter()->take(2)->map(fn ($part) => mb_strtoupper(mb_substr($part, 0, 1)))->join('');
+                        $assigneeName = $ticket->assignedTo?->name;
+                        $priority = $priorityStyles[$ticket->priority] ?? $priorityStyles['low'];
+                        $priorityLabel = TicketPriority::tryFrom($ticket->priority)?->label() ?? ucfirst($ticket->priority);
+                        $categoryLabel = TicketCategory::tryFrom((string) $ticket->category)?->shortLabel() ?? '—';
                     @endphp
-                    <tr class="hover:bg-gray-50/70 transition-colors">
-                        <td class="pl-5 pr-3 py-3.5 whitespace-nowrap text-xs font-medium text-gray-400 tabular-nums">
+                    <tr class="group hover:bg-gray-50 transition-colors">
+                        <td class="pl-5 pr-3.5 py-3.5 whitespace-nowrap text-xs font-medium text-gray-400 tabular-nums {{ $sticky }} bg-white group-hover:bg-gray-50 transition-colors">
                             {{ $ticket->ticket_number }}
                         </td>
-                        <td class="px-3 py-3.5 whitespace-nowrap hidden md:table-cell">
-                            <div class="flex items-center gap-2.5">
-                                <span class="w-7 h-7 rounded-full bg-brand/10 text-brand text-[10px] font-semibold flex items-center justify-center shrink-0">{{ $initials }}</span>
-                                <span class="text-gray-700">{{ $requesterName }}</span>
+
+                        @if ($showRequester)
+                            <td class="px-3.5 py-3.5 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-semibold flex items-center justify-center shrink-0">{{ $initials($requesterName) }}</span>
+                                    <span class="text-gray-700">{{ $requesterName }}</span>
+                                </div>
+                            </td>
+                        @endif
+
+                        {{-- Bounded, wrapping title: shrinks to min-w before the table scrolls, never grows past max-w,
+                             so spare width is shared by every column. Two lines max, full text on hover. --}}
+                        <td class="px-3.5 py-3.5">
+                            <div class="min-w-36 max-w-xs">
+                                @if ($canOpen)
+                                    <a href="{{ route('tickets.show', $ticket) }}" class="line-clamp-2 font-medium leading-snug text-gray-800 hover:text-brand" title="{{ $ticket->title }}">{{ $ticket->title }}</a>
+                                @else
+                                    <p class="line-clamp-2 font-medium leading-snug text-gray-800" title="{{ $ticket->title }}">{{ $ticket->title }}</p>
+                                @endif
                             </div>
                         </td>
-                        <td class="px-3 py-3.5 w-full max-w-0">
-                            @if ($canOpen)
-                                <a href="{{ route('tickets.show', $ticket) }}" class="block truncate font-medium text-gray-800 hover:text-brand" title="{{ $ticket->title }}">{{ $ticket->title }}</a>
-                            @else
-                                <p class="truncate font-medium text-gray-800" title="{{ $ticket->title }}">{{ $ticket->title }}</p>
-                            @endif
-                            <p class="flex items-center gap-2 mt-0.5 text-[11px] text-gray-400">
-                                <span>{{ ucfirst($ticket->category ?? 'General') }}</span>
-                                <span class="text-gray-300">·</span>
-                                <span class="inline-flex items-center gap-1">
-                                    <span class="w-1.5 h-1.5 rounded-full {{ $priorityDot[$ticket->priority] ?? 'bg-gray-300' }}"></span>
-                                    {{ ucfirst($ticket->priority) }}
-                                </span>
-                                <span class="md:hidden text-gray-300">·</span>
-                                <span class="md:hidden truncate">{{ $requesterName }}</span>
-                            </p>
+
+                        <td class="px-3.5 py-3.5 whitespace-nowrap text-gray-600">
+                            {{ $categoryLabel }}
                         </td>
-                        <td class="px-3 py-3.5 whitespace-nowrap">
+
+                        <td class="px-3.5 py-3.5 whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1.5 text-xs font-medium {{ $priority['text'] }}">
+                                <span class="w-1.5 h-1.5 rounded-full {{ $priority['dot'] }}"></span>
+                                {{ $priorityLabel }}
+                            </span>
+                        </td>
+
+                        <td class="px-3.5 py-3.5 whitespace-nowrap">
+                            @if ($assigneeName)
+                                <div class="flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-full bg-teal/15 text-teal-700 text-[10px] font-semibold flex items-center justify-center shrink-0">{{ $initials($assigneeName) }}</span>
+                                    <span class="text-gray-700">{{ $assigneeName }}</span>
+                                </div>
+                            @else
+                                <div class="flex items-center gap-2 text-gray-400">
+                                    <span class="w-6 h-6 rounded-full border border-dashed border-gray-300 shrink-0"></span>
+                                    <span class="text-xs">Not assigned</span>
+                                </div>
+                            @endif
+                        </td>
+
+                        <td class="px-3.5 py-3.5 whitespace-nowrap">
                             @include('partials.status-badge', ['status' => $ticket->status])
                         </td>
-                        <td class="pl-3 pr-5 py-3.5 whitespace-nowrap hidden sm:table-cell">
+
+                        <td class="pl-3.5 pr-5 py-3.5 whitespace-nowrap">
                             <time datetime="{{ $ticket->created_at->toIso8601String() }}" class="block text-gray-700 tabular-nums">{{ $ticket->created_at->format('M j, Y') }}</time>
                             <span class="block text-[11px] text-gray-400 tabular-nums">{{ $ticket->created_at->format('H:i') }}</span>
                         </td>

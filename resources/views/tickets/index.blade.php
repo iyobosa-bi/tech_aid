@@ -30,7 +30,7 @@
             <input
                 type="search" name="search" x-ref="search" x-model="search" value="{{ $filters['search'] }}"
                 @input.debounce.300ms="refresh()" @keydown.escape="clearSearch()"
-                placeholder="Search by ticket ID, title or requester" autocomplete="off" maxlength="100"
+                placeholder="{{ $showRequester ? 'Search by ticket ID, title or requester' : 'Search by ticket ID or title' }}" autocomplete="off" maxlength="100"
                 aria-label="Search tickets"
                 class="w-full pl-9 pr-9 py-2.5 rounded-lg border border-gray-200 bg-gray-50/60 text-sm text-gray-800 placeholder:text-gray-400 transition-colors focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
             />

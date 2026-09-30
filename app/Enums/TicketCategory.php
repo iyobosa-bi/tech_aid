@@ -22,4 +22,16 @@ enum TicketCategory: string
             self::Other => 'Other',
         };
     }
+
+    public function shortLabel(): string
+    {
+        return match ($this) {
+            self::Hardware => 'Hardware',
+            self::Software => 'Software',
+            self::Network => 'Network',
+            self::Email => 'Email',
+            self::Access => 'Access & Accounts',
+            self::Other => 'Other',
+        };
+    }
 }

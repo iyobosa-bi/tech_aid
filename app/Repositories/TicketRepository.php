@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 
 class TicketRepository
 {
-    public const SORTABLE = ['id', 'requester', 'status', 'created_at'];
+    public const SORTABLE = ['id', 'requester', 'category', 'priority', 'status', 'created_at'];
 
     public const PER_PAGE = 15;
 
@@ -24,7 +24,7 @@ class TicketRepository
     {
         $query = Ticket::query()
             ->visibleTo($user)
-            ->with('requester:id,name');
+            ->with(['requester:id,name', 'assignedTo:id,name']);
 
         if ($filters['search'] !== '') {
             $term = '%'.$filters['search'].'%';
@@ -43,6 +43,10 @@ class TicketRepository
             'requester' => $query->orderBy(
                 User::withTrashed()->select('name')->whereColumn('users.id', 'tickets.requester_id'),
                 $filters['direction'],
+            ),
+            // By severity, not alphabetically. Direction is whitelisted to asc|desc upstream.
+            'priority' => $query->orderByRaw(
+                "CASE priority WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END {$filters['direction']}"
             ),
             default => $query->orderBy($filters['sort'], $filters['direction']),
         };
