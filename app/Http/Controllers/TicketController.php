@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
+
 class TicketController extends Controller
 {
     public function create(Request $request, TicketUploadService $uploads): View

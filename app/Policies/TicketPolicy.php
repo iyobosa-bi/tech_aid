@@ -6,6 +6,7 @@ use App\Enums\PermissionName;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 /**
  * Spatie permissions answer "what kind of user is this"; each method here adds
@@ -13,9 +14,9 @@ use App\Models\User;
  */
 class TicketPolicy
 {
-    public function create(User $user): bool
+    public function create(User $user): Response
     {
-        return $user->checkPermissionTo(PermissionName::CreateTickets);
+        return $user->checkPermissionTo(PermissionName::CreateTickets)? Response::allow():Response::deny('You do not have permission to create a Ticket');
     }
 
     public function view(User $user, Ticket $ticket): bool

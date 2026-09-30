@@ -164,15 +164,7 @@
         </div>
 
         <div class="p-5 sm:p-8">
-            @if (session('success'))
-                <div x-data="{ show: true }" x-show="show" class="mb-6 flex items-start gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-lg">
-                    <i data-lucide="check-circle" class="w-4 h-4 text-green-600 mt-0.5 shrink-0"></i>
-                    <p class="flex-1 text-sm text-green-700">{{ session('success') }}</p>
-                    <button type="button" @click="show = false" class="text-green-600/60 hover:text-green-700">
-                        <i data-lucide="x" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            @endif
+            @include('partials.flash-messages')
             {{ $slot ?? '' }}
             @yield('content')
         </div>

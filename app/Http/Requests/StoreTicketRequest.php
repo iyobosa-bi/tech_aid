@@ -5,18 +5,21 @@ namespace App\Http\Requests;
 use App\Enums\TicketCategory;
 use App\Enums\TicketPriority;
 use App\Models\Ticket;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 class StoreTicketRequest extends FormRequest
 {
     public const MAX_ATTACHMENTS = 5;
 
-    // Runs before validation, so an unauthorized user gets a 403, not form errors.
-    public function authorize(): bool
+    // Runs before validation, so an unauthorized user is denied rather than shown form
+    // errors. Returning the policy's Response (not a bool) keeps its denial message.
+    public function authorize(): Response
     {
-        return $this->user()->can('create', Ticket::class);
+        return Gate::inspect('create', Ticket::class);
     }
 
     // FilePond can leave an empty hidden input for a file that never finished uploading.

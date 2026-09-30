@@ -26,7 +26,8 @@ class DemoUserSeeder extends Seeder
         $this->user('support@example.com', 'Sade Support', RoleName::ApplicationSupport, 'Technology');
         $this->user('admin@example.com', 'Ade Admin', RoleName::Admin, 'Technology');
     }
-
+    
+    
     private function user(string $email, string $name, RoleName $role, string $department): User
     {
         $user = User::withTrashed()->firstOrCreate(

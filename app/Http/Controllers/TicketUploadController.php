@@ -47,7 +47,7 @@ class TicketUploadController extends Controller
 
         return response($id, 200, ['Content-Type' => 'text/plain']);
     }
-
+    
     public function destroy(Request $request, TicketUploadService $uploads): Response
     {
         $this->authorize('create', Ticket::class);
