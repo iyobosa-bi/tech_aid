@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\PermissionName;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -37,24 +39,41 @@ class Ticket extends Model
         ];
     }
 
+    /**
+     * Tickets the user may see — must stay in step with TicketPolicy::view().
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->checkPermissionTo(PermissionName::AssignTickets)) {
+            return $query;
+        }
+
+        return $query->where(fn (Builder $q) => $q
+            ->where('requester_id', $user->id)
+            ->orWhere('line_manager_id', $user->id)
+            ->orWhere('assigned_to_id', $user->id));
+    }
+
+    // Users are soft-deleted, never removed, so historical tickets keep resolving
+    // their people (audit trail) — hence withTrashed() on every user relation.
     public function requester(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'requester_id');
+        return $this->belongsTo(User::class, 'requester_id')->withTrashed();
     }
 
     public function lineManager(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'line_manager_id');
+        return $this->belongsTo(User::class, 'line_manager_id')->withTrashed();
     }
 
     public function assignedTo(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_to_id');
+        return $this->belongsTo(User::class, 'assigned_to_id')->withTrashed();
     }
 
     public function assignedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_by_id');
+        return $this->belongsTo(User::class, 'assigned_by_id')->withTrashed();
     }
 
     public function statusHistory(): HasMany

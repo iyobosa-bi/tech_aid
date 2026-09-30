@@ -19,6 +19,12 @@ class TicketPolicy
         return $user->checkPermissionTo(PermissionName::CreateTickets)? Response::allow():Response::deny('You do not have permission to create a Ticket');
     }
 
+    // Anyone signed in may open the list; Ticket::scopeVisibleTo() limits which rows they get.
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
     public function view(User $user, Ticket $ticket): bool
     {
         return in_array($user->id, [$ticket->requester_id, $ticket->line_manager_id, $ticket->assigned_to_id], true)
@@ -37,7 +43,7 @@ class TicketPolicy
         return $user->checkPermissionTo(PermissionName::AssignTickets)
             && $this->statusIs($ticket, TicketStatus::PendingAssignment, TicketStatus::Reopened);
     }
-
+    
     public function reassign(User $user, Ticket $ticket): bool
     {
         return $user->checkPermissionTo(PermissionName::ReassignTickets)

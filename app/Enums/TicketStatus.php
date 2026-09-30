@@ -12,4 +12,18 @@ enum TicketStatus: string
     case Resolved = 'resolved';
     case Closed = 'closed';
     case Reopened = 'reopened';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::PendingLineManagerApproval => 'Pending Approval',
+            self::Returned => 'Returned',
+            self::PendingAssignment => 'Pending Assignment',
+            self::Assigned => 'Assigned',
+            self::InProgress => 'In Progress',
+            self::Resolved => 'Resolved',
+            self::Closed => 'Closed',
+            self::Reopened => 'Reopened',
+        };
+    }
 }

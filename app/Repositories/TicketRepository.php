@@ -5,10 +5,52 @@ namespace App\Repositories;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketStatusHistory;
+use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 class TicketRepository
 {
+    public const SORTABLE = ['id', 'requester', 'status', 'created_at'];
+
+    public const PER_PAGE = 15;
+
+    /**
+     * @param  array{search: string, status: ?string, sort: string, direction: string}  $filters
+     * @return LengthAwarePaginator<int, Ticket>
+     */
+    public function paginateVisibleTo(User $user, array $filters): LengthAwarePaginator
+    {
+        $query = Ticket::query()
+            ->visibleTo($user)
+            ->with('requester:id,name');
+
+        if ($filters['search'] !== '') {
+            $term = '%'.$filters['search'].'%';
+
+            $query->where(fn (Builder $q) => $q
+                ->whereLike('ticket_number', $term)
+                ->orWhereLike('title', $term)
+                ->orWhereHas('requester', fn (Builder $r) => $r->whereLike('name', $term)));
+        }
+
+        if ($filters['status']) {
+            $query->where('status', $filters['status']);
+        }
+
+        match ($filters['sort']) {
+            'requester' => $query->orderBy(
+                User::withTrashed()->select('name')->whereColumn('users.id', 'tickets.requester_id'),
+                $filters['direction'],
+            ),
+            default => $query->orderBy($filters['sort'], $filters['direction']),
+        };
+
+        // Tie-breaker so rows with equal sort values don't shuffle between pages.
+        return $query->orderBy('id', 'desc')->paginate(self::PER_PAGE)->withQueryString();
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      */

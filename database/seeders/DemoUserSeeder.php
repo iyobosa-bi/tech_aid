@@ -22,6 +22,11 @@ class DemoUserSeeder extends Seeder
         $requester = $this->user('test@example.com', 'Test User', RoleName::Requester, 'Operations');
         $requester->update(['line_manager_id' => $lineManager->id]);
 
+
+        $requester = $this->user('testtwo@example.com', 'Test two User', RoleName::Requester, 'Operations');
+       // $requester->update(['line_manager_id' => $lineManager->id]);
+        
+
         $this->user('hosm@example.com', 'Hassan Service-Lead', RoleName::HeadOfServiceManagement, 'Technology');
         $this->user('support@example.com', 'Sade Support', RoleName::ApplicationSupport, 'Technology');
         $this->user('admin@example.com', 'Ade Admin', RoleName::Admin, 'Technology');
@@ -30,6 +35,7 @@ class DemoUserSeeder extends Seeder
     
     private function user(string $email, string $name, RoleName $role, string $department): User
     {
+
         $user = User::withTrashed()->firstOrCreate(
             ['email' => $email],
             [
@@ -42,7 +48,7 @@ class DemoUserSeeder extends Seeder
         if (! $user->email_verified_at) {
             $user->forceFill(['email_verified_at' => now()])->save();
         }
-
+        
         $user->assignRole($role->value);
 
         return $user;

@@ -59,16 +59,16 @@ class AuthenticatedSessionController extends Controller
 
         $user = $request->authenticate();
         
-        $this->issueOtp($user);
-        
+        $code = $this->issueOtp($user);
+
         $request->session()->put('login.otp.user_id', $user->id);
         // $request->session()->flash('otp_pending', true);
 
         // return redirect()->route('login');
-        return response()->json([
+        return $this->otpResponse([
             'success' => true,
             'otp_pending' => true,
-        ]);
+        ], $code);
 
 
     }
@@ -133,11 +133,11 @@ class AuthenticatedSessionController extends Controller
             ], 419);
         }
 
-        $this->issueOtp(User::findOrFail($userId));
+        $code = $this->issueOtp(User::findOrFail($userId));
 
-        return response()->json([
+        return $this->otpResponse([
             'message' => 'A new code has been sent.',
-        ]);
+        ], $code);
     }
 
     /**
@@ -167,10 +167,10 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Invalidate any outstanding codes, generate a new one, and email it.
-     * The plain code only ever exists in the queued notification — the
-     * database stores a hash, per docs/06-data-model.md.
+     * The database stores only a hash (docs/06-data-model.md); the plain code
+     * lives in the queued notification and, in local dev only, otpResponse().
      */
-    private function issueOtp(User $user): void
+    private function issueOtp(User $user): string
     {
         OtpCode::where('user_id', $user->id)->whereNull('used_at')->update(['used_at' => now()]);
          
@@ -183,6 +183,24 @@ class AuthenticatedSessionController extends Controller
         ]);
 
         $user->notify(new LoginOtpCode($code));
+
+        return $code;
+    }
+
+    /**
+     * Local-dev convenience: expose the plain code so the login page can
+     * console.log it instead of digging through the mail log. Requires BOTH
+     * APP_ENV=local and APP_DEBUG=true, so it can never reach production.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function otpResponse(array $payload, string $code): JsonResponse
+    {
+        if (app()->isLocal() && config('app.debug')) {
+            $payload['debug_code'] = $code;
+        }
+
+        return response()->json($payload);
     }
 
     /**

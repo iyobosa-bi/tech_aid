@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enums\TicketCategory;
 use App\Enums\TicketPriority;
+use App\Enums\TicketStatus;
+use App\Http\Requests\ListTicketsRequest;
 use App\Http\Requests\StoreTicketRequest;
 use App\Models\Ticket;
+use App\Repositories\TicketRepository;
 use App\Services\TicketCreationService;
 use App\Services\TicketUploadService;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +18,26 @@ use Illuminate\View\View;
 
 class TicketController extends Controller
 {
+    public function index(ListTicketsRequest $request, TicketRepository $tickets): View
+    {
+        $filters = $request->filters();
+
+        $data = [
+            'tickets' => $tickets->paginateVisibleTo($request->user(), $filters),
+            'filters' => $filters,
+        ];
+
+        // Live search swaps only the results region, so skip the full layout.
+        if ($request->ajax()) {
+            return view('tickets.partials.results', $data);
+        }
+
+        return view('tickets.index', [
+            ...$data,
+            'statuses' => TicketStatus::cases(),
+        ]);
+    }
+
     public function create(Request $request, TicketUploadService $uploads): View
     {
         $this->authorize('create', Ticket::class);

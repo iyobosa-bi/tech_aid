@@ -77,6 +77,7 @@ function loginPage() {
                     return;
                 }
 
+                this.logDebugCode(data);
                 this.otpOpen = true;
                 this.code = ['', '', '', '', '', ''];
                 this.loginError = '';
@@ -92,6 +93,13 @@ function loginPage() {
             }
         },
     
+
+        // The server only includes debug_code when APP_ENV=local and APP_DEBUG=true.
+        logDebugCode(data) {
+            if (data.debug_code) {
+                console.info(`%c[Tech Aid dev] OTP code: ${data.debug_code}`, 'color:#152a9e;font-weight:bold;font-size:14px');
+            }
+        },
 
         async verify() {
             this.otpError = '';
@@ -146,6 +154,7 @@ function loginPage() {
                     return;
                 }
 
+                this.logDebugCode(data);
                 this.resendMessage = data.message || 'A new code has been sent.';
             } catch (e) {
                 this.otpError = 'Something went wrong. Please try again.';

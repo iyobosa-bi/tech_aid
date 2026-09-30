@@ -9,19 +9,9 @@ $colors = [
     'closed' => 'bg-gray-100 text-gray-600',
     'reopened' => 'bg-red-100 text-red-700',
 ];
-$labels = [
-    'pending_line_manager_approval' => 'Pending',
-    'returned' => 'Returned',
-    'pending_assignment' => 'Pending Assignment',
-    'assigned' => 'Assigned',
-    'in_progress' => 'In Progress',
-    'resolved' => 'Resolved',
-    'closed' => 'Closed',
-    'reopened' => 'Reopened',
-];
 $class = $colors[$status] ?? 'bg-gray-100 text-gray-600';
-$label = $labels[$status] ?? Str::headline($status);
+$label = \App\Enums\TicketStatus::tryFrom($status)?->label() ?? Str::headline($status);
 @endphp
-<span class="{{ $class }} text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0">
+<span class="{{ $class }} inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap">
     {{ $label }}
 </span>
