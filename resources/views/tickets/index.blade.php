@@ -5,10 +5,24 @@
         @keyframes ticketListProgress { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
         .ticket-list-progress { animation: ticketListProgress 0.9s ease-in-out infinite; }
         input[type="search"]::-webkit-search-cancel-button { display: none; }
+
+        /* Scroll cues, toggled by ticket-list.js: a shadow under the pinned ID column once scrolled,
+           and a fade on the right edge while more columns are hidden. */
+        /* Chrome skips box-shadow on cells of a border-collapse table, so the edge is a pseudo-element. */
+        .ticket-sticky { transition: background-color .15s ease; }
+        .ticket-sticky::after {
+            content: ''; position: absolute; top: 0; bottom: 0; right: -12px; width: 12px; pointer-events: none;
+            border-left: 1px solid #e5e7eb; background: linear-gradient(to right, rgb(15 23 42 / .07), transparent);
+            opacity: 0; transition: opacity .2s ease;
+        }
+        [data-scrolled] .ticket-sticky::after { opacity: 1; }
+        .ticket-scroll-fade { opacity: 0; transition: opacity .2s ease; }
+        [data-more-right] .ticket-scroll-fade { opacity: 1; }
     </style>
 @endpush
 
 @section('content')
+{{-- Layout follows design/screenshots/ticketTable.png: tinted panel, toolbar row, white table card inside. --}}
 <div
     x-data="ticketList(@js([
         'url' => route('tickets.index'),
@@ -17,42 +31,49 @@
         'sort' => $filters['sort'],
         'direction' => $filters['direction'],
     ]))"
-    class="relative bg-white border border-gray-100 rounded-xl shadow-sm"
+    class="relative rounded-xl bg-brand/[0.06] p-3"
 >
     <div x-show="loading" x-cloak class="absolute inset-x-0 top-0 h-0.5 overflow-hidden rounded-t-xl" aria-hidden="true">
         <div class="h-full w-1/4 bg-brand ticket-list-progress"></div>
     </div>
 
     <form method="GET" action="{{ route('tickets.index') }}" @submit.prevent="refresh()" role="search"
-          class="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 border-b border-gray-100">
-        <div class="relative flex-1 sm:max-w-md">
-            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
-            <input
-                type="search" name="search" x-ref="search" x-model="search" value="{{ $filters['search'] }}"
-                @input.debounce.300ms="refresh()" @keydown.escape="clearSearch()"
-                placeholder="{{ $showRequester ? 'Search by ticket ID, title or requester' : 'Search by ticket ID or title' }}" autocomplete="off" maxlength="100"
-                aria-label="Search tickets"
-                class="w-full pl-9 pr-9 py-2.5 rounded-lg border border-gray-200 bg-gray-50/60 text-sm text-gray-800 placeholder:text-gray-400 transition-colors focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
-            />
-            <kbd x-show="!search" class="hidden sm:flex absolute right-2.5 top-1/2 -translate-y-1/2 items-center justify-center w-5 h-5 rounded border border-gray-200 bg-white text-[10px] font-medium text-gray-400 pointer-events-none" aria-hidden="true">/</kbd>
-            <button type="button" x-show="search" x-cloak @click="clearSearch()" aria-label="Clear search"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100">
-                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          class="flex flex-col lg:flex-row lg:items-center gap-3 px-1 pt-1 pb-4">
+        <h2 class="font-display font-semibold text-sm text-gray-900 whitespace-nowrap lg:mr-6">{{ $heading }}</h2>
+
+        <div class="flex gap-2 flex-1 lg:max-w-xl">
+            <div class="relative flex-1 min-w-0">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-brand pointer-events-none"></i>
+                <input
+                    type="search" name="search" x-ref="search" x-model="search" value="{{ $filters['search'] }}"
+                    @input.debounce.300ms="refresh()" @keydown.escape="clearSearch()"
+                    placeholder="{{ $showRequester ? 'Search tickets by ID, title or requester' : 'Search tickets by ID or title' }}" autocomplete="off" maxlength="100"
+                    aria-label="Search tickets"
+                    class="w-full h-11 pl-10 pr-9 rounded-lg border border-white bg-white text-sm text-gray-900 placeholder:text-gray-400 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                />
+                <button type="button" x-show="search" x-cloak @click="clearSearch()" aria-label="Clear search"
+                        class="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+            <button type="submit"
+                    class="h-11 px-5 sm:px-7 rounded-lg bg-brand hover:bg-brand-dark active:scale-[0.98] text-white font-display font-semibold text-sm shadow-sm transition">
+                Search
             </button>
         </div>
 
-        <div class="relative sm:ml-auto">
-            <i data-lucide="list-filter" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-               :class="status ? 'text-brand' : 'text-gray-400'"></i>
+        {{-- The empty option doubles as the placeholder: it reads "Filter" until a status is picked,
+             then "All statuses" so it can be chosen to clear the filter. --}}
+        <div class="relative lg:ml-auto lg:w-60">
             <select name="status" x-model="status" @change="refresh()" aria-label="Filter by status"
-                    class="w-full sm:w-auto appearance-none pl-9 pr-9 py-2.5 rounded-lg border bg-white text-sm cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
-                    :class="status ? 'border-brand/40 text-brand font-medium' : 'border-gray-200 text-gray-600'">
-                <option value="">All statuses</option>
+                    class="w-full h-11 appearance-none pl-4 pr-10 rounded-lg border border-brand bg-white text-sm cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    :class="status ? 'text-brand font-medium' : 'text-gray-400'">
+                <option value="" class="text-gray-900" x-text="status ? 'All statuses' : 'Filter'">{{ $filters['status'] ? 'All statuses' : 'Filter' }}</option>
                 @foreach ($statuses as $status)
-                    <option value="{{ $status->value }}" @selected($filters['status'] === $status->value)>{{ $status->label() }}</option>
+                    <option value="{{ $status->value }}" class="text-gray-900" @selected($filters['status'] === $status->value)>{{ $status->label() }}</option>
                 @endforeach
             </select>
-            <i data-lucide="chevron-down" class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+            <i data-lucide="list-filter" class="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-brand pointer-events-none"></i>
         </div>
 
         {{-- Keeps the current sort when the form is submitted without JavaScript. --}}
@@ -61,7 +82,7 @@
     </form>
 
     <div x-ref="results" @click="navigate($event)" aria-live="polite" :aria-busy="loading.toString()"
-         class="transition-opacity duration-150" :class="loading && 'opacity-60'">
+         class="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden transition-opacity duration-150" :class="loading && 'opacity-60'">
         @include('tickets.partials.results')
     </div>
 </div>

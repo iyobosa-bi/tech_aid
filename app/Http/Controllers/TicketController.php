@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PermissionName;
 use App\Enums\TicketCategory;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Http\Requests\ListTicketsRequest;
 use App\Http\Requests\StoreTicketRequest;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Repositories\TicketRepository;
 use App\Services\TicketCreationService;
 use App\Services\TicketUploadService;
@@ -37,7 +39,19 @@ class TicketController extends Controller
         return view('tickets.index', [
             ...$data,
             'statuses' => TicketStatus::cases(),
+            'heading' => $this->listHeading($request->user()),
         ]);
+    }
+
+    // Mirrors Ticket::scopeVisibleTo: names the slice of tickets this user is looking at.
+    private function listHeading(User $user): string
+    {
+        return match (true) {
+            $user->checkPermissionTo(PermissionName::AssignTickets) => 'All Tickets',
+            $user->checkPermissionTo(PermissionName::ApproveTickets) => 'Team Tickets',
+            $user->checkPermissionTo(PermissionName::ResolveTickets) => 'Assigned Tickets',
+            default => 'My Tickets',
+        };
     }
 
     public function create(Request $request, TicketUploadService $uploads): View
