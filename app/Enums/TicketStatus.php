@@ -13,6 +13,26 @@ enum TicketStatus: string
     case Closed = 'closed';
     case Reopened = 'reopened';
 
+    /**
+     * Statuses still waiting on someone (dashboard "Open Tickets").
+     *
+     * @return list<self>
+     */
+    public static function open(): array
+    {
+        return [self::PendingLineManagerApproval, self::Returned, self::PendingAssignment, self::Assigned, self::InProgress];
+    }
+
+    /**
+     * Statuses where Application Support is actively working the ticket.
+     *
+     * @return list<self>
+     */
+    public static function active(): array
+    {
+        return [self::Assigned, self::InProgress];
+    }
+
     public function label(): string
     {
         return match ($this) {
