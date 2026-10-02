@@ -5,19 +5,6 @@
         @keyframes ticketListProgress { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
         .ticket-list-progress { animation: ticketListProgress 0.9s ease-in-out infinite; }
         input[type="search"]::-webkit-search-cancel-button { display: none; }
-
-        /* Scroll cues, toggled by ticket-list.js: a shadow under the pinned ID column once scrolled,
-           and a fade on the right edge while more columns are hidden. */
-        /* Chrome skips box-shadow on cells of a border-collapse table, so the edge is a pseudo-element. */
-        .ticket-sticky { transition: background-color .15s ease; }
-        .ticket-sticky::after {
-            content: ''; position: absolute; top: 0; bottom: 0; right: -12px; width: 12px; pointer-events: none;
-            border-left: 1px solid #e5e7eb; background: linear-gradient(to right, rgb(15 23 42 / .07), transparent);
-            opacity: 0; transition: opacity .2s ease;
-        }
-        [data-scrolled] .ticket-sticky::after { opacity: 1; }
-        .ticket-scroll-fade { opacity: 0; transition: opacity .2s ease; }
-        [data-more-right] .ticket-scroll-fade { opacity: 1; }
     </style>
 @endpush
 

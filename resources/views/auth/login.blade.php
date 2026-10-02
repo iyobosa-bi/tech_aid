@@ -88,9 +88,11 @@
                 <div
                     x-show="loginError"
                     x-cloak
-                    class="mb-5 px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg"
+                    role="alert"
+                    class="mb-5 flex items-start gap-2 px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg"
                 >
-                  <p x-text="loginError" class="text-xs text-red-600"></p>
+                  <i data-lucide="circle-alert" class="w-4 h-4 text-red-600 shrink-0"></i>
+                  <p x-text="loginError" class="text-xs font-semibold leading-4 text-red-700"></p>
                 </div>
 
                 <form method="POST" action="{{ route('login') }}" class="space-y-5" @submit.prevent="login()">

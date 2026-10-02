@@ -5,9 +5,12 @@ namespace App\Services;
 use App\Enums\RoleName;
 use App\Enums\TicketAction;
 use App\Enums\TicketStatus;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Repositories\DashboardRepository;
+use App\Repositories\TicketRepository;
 use Carbon\CarbonInterval;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 
 /**
@@ -17,7 +20,23 @@ use Illuminate\Support\Carbon;
  */
 class DashboardService
 {
-    public function __construct(private DashboardRepository $stats) {}
+    public const RECENT_TICKETS = 5;
+
+    public function __construct(
+        private DashboardRepository $stats,
+        private TicketRepository $tickets,
+    ) {}
+
+    /**
+     * The newest tickets from the user's own Tickets page — same visibility rule, so the
+     * dashboard never shows a ticket the user couldn't open from there.
+     *
+     * @return Collection<int, Ticket>
+     */
+    public function recentTicketsFor(User $user): Collection
+    {
+        return $this->tickets->recentVisibleTo($user, self::RECENT_TICKETS);
+    }
 
     /**
      * @return list<array{label: string, value: string, hint: string, icon: string, tone: string, breakdown?: list<array{status: string, count: int}>}>

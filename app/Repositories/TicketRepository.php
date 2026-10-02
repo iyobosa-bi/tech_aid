@@ -8,6 +8,7 @@ use App\Models\TicketStatusHistory;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 
 class TicketRepository
@@ -22,9 +23,7 @@ class TicketRepository
      */
     public function paginateVisibleTo(User $user, array $filters): LengthAwarePaginator
     {
-        $query = Ticket::query()
-            ->visibleTo($user)
-            ->with(['requester:id,name', 'assignedTo:id,name']);
+        $query = $this->visibleTo($user);
 
         if ($filters['search'] !== '') {
             $term = '%'.$filters['search'].'%';
@@ -53,6 +52,22 @@ class TicketRepository
 
         // Tie-breaker so rows with equal sort values don't shuffle between pages.
         return $query->orderBy('id', 'desc')->paginate(self::PER_PAGE)->withQueryString();
+    }
+
+    /**
+     * The newest tickets on the user's Tickets page, for the dashboard's Recent Tickets.
+     *
+     * @return Collection<int, Ticket>
+     */
+    public function recentVisibleTo(User $user, int $limit): Collection
+    {
+        return $this->visibleTo($user)->latest()->orderBy('id', 'desc')->limit($limit)->get();
+    }
+
+    // Same visibility rule (Ticket::scopeVisibleTo) and columns for every ticket listing.
+    private function visibleTo(User $user): Builder
+    {
+        return Ticket::query()->visibleTo($user)->with(['requester:id,name', 'assignedTo:id,name']);
     }
 
     /**

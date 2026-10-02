@@ -17,23 +17,6 @@ function ticketList(config) {
                     this.$refs.search.focus();
                 }
             });
-
-            // Scroll events don't bubble, so listen in the capture phase — this keeps working
-            // after live search replaces the table inside the results region.
-            this.$refs.results.addEventListener('scroll', () => this.syncScroll(), { capture: true, passive: true });
-            window.addEventListener('resize', () => this.syncScroll(), { passive: true });
-            this.syncScroll();
-            document.fonts?.ready.then(() => this.syncScroll()); // Poppins loading late changes column widths
-        },
-
-        // Flags the frame so CSS can show the pinned-column shadow and the "more to the right" fade.
-        syncScroll() {
-            const scroller = this.$refs.results.querySelector('[data-scroll-x]');
-            if (!scroller) return;
-
-            const frame = scroller.closest('[data-scroll-frame]');
-            frame.toggleAttribute('data-scrolled', scroller.scrollLeft > 0);
-            frame.toggleAttribute('data-more-right', scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1);
         },
 
         buildUrl() {
@@ -103,7 +86,6 @@ function ticketList(config) {
                 this.$refs.results.innerHTML = await response.text();
                 window.history.replaceState(null, '', url);
                 lucide.createIcons();
-                this.syncScroll();
             } catch (error) {
                 if (error.name !== 'AbortError') window.location.href = url;
             } finally {

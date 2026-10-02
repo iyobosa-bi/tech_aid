@@ -30,3 +30,8 @@ Route::middleware(['auth', 'cache.headers:no_store'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// Any URL no route above matched. Going through a route (rather than letting the router throw
+// its own 404) runs the web middleware first, so the 404 page knows whether someone is signed
+// in and can offer "Back to dashboard" or "Go to sign in". See resources/views/errors/404.blade.php.
+Route::fallback(fn () => abort(404));
