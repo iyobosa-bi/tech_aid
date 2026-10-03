@@ -69,6 +69,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Staff Email Domain
+    |--------------------------------------------------------------------------
+    |
+    | The login page checks, as you type, that the email ends with @ this domain.
+    | It's a convenience hint only — the server still decides who can sign in.
+    | Local development uses example.com to match the seeded demo accounts.
+    |
+    */
+
+    'staff_email_domain' => env('STAFF_EMAIL_DOMAIN', 'optimusbank.com'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

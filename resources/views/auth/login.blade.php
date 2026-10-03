@@ -6,6 +6,8 @@
      data-verify-url="{{ route('login.otp.verify') }}"
      data-resend-url="{{ route('login.otp.resend') }}"
      data-cancel-url="{{ route('login.otp.cancel') }}"
+     data-email-domain="{{ config('app.staff_email_domain') }}"
+     data-old-email="{{ old('email') }}"
      class="h-full flex"
 >
     <div
@@ -95,41 +97,63 @@
                   <p x-text="loginError" class="text-xs font-semibold leading-4 text-red-700"></p>
                 </div>
 
-                <form method="POST" action="{{ route('login') }}" class="space-y-5" @submit.prevent="login()">
+                {{-- novalidate: our live messages replace the browser's own validation bubbles. --}}
+                <form method="POST" action="{{ route('login') }}" class="space-y-5" novalidate @submit.prevent="login()">
                     @csrf
 
                     <div>
                         <label for="email" class="block font-display font-medium text-brand text-sm mb-1.5">Email</label>
                         <div class="relative">
-                            <i data-lucide="mail" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <i data-lucide="mail" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 transition-colors"
+                               :class="emailInvalid ? 'text-red-500' : 'text-gray-400'"></i>
                             <input
-                                id="email" name="email" type="email" value="{{ old('email') }}" required autofocus
+                                id="email" name="email" type="email" required autofocus autocomplete="username"
                                 placeholder="Email"
-                                class="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-white
-                                       text-gray-800 text-sm placeholder:text-gray-400
-                                       focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                                x-ref="emailInput" x-model="email"
+                                @input.debounce.500ms="touched.email = true" @blur="touched.email = true"
+                                :aria-invalid="emailInvalid.toString()" aria-describedby="email-error"
+                                class="w-full pl-10 pr-3 py-2.5 rounded-lg border text-gray-800 text-sm placeholder:text-gray-400
+                                       transition-colors focus:outline-none focus:ring-2"
+                                :class="emailInvalid
+                                    ? 'border-red-400 bg-red-50/40 focus:ring-red-500/20 focus:border-red-500'
+                                    : 'border-gray-200 bg-white focus:ring-brand/20 focus:border-brand'"
                             />
                         </div>
+                        <p id="email-error" x-show="emailInvalid" x-cloak x-transition.opacity.duration.150ms
+                           class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-red-600">
+                            <i data-lucide="circle-alert" class="w-3.5 h-3.5 mt-px shrink-0"></i>
+                            <span x-text="emailError"></span>
+                        </p>
                     </div>
 
                     <div>
                         <label for="password" class="block font-display font-medium text-brand text-sm mb-1.5">Password</label>
                         <div class="relative">
-                            <i data-lucide="lock" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <i data-lucide="lock" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 transition-colors"
+                               :class="passwordInvalid ? 'text-red-500' : 'text-gray-400'"></i>
                             <input
                                 :type="showPw ? 'text' : 'password'"
-                                x-ref="passwordInput"
-                                id="password" name="password" required placeholder="Password"
-                                class="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-200 bg-white
-                                       text-gray-800 text-sm placeholder:text-gray-400
-                                       focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                                id="password" name="password" required placeholder="Password" autocomplete="current-password"
+                                x-ref="passwordInput" x-model="password"
+                                @input.debounce.500ms="touched.password = true" @blur="touched.password = true"
+                                :aria-invalid="passwordInvalid.toString()" aria-describedby="password-error"
+                                class="w-full pl-10 pr-10 py-2.5 rounded-lg border text-gray-800 text-sm placeholder:text-gray-400
+                                       transition-colors focus:outline-none focus:ring-2"
+                                :class="passwordInvalid
+                                    ? 'border-red-400 bg-red-50/40 focus:ring-red-500/20 focus:border-red-500'
+                                    : 'border-gray-200 bg-white focus:ring-brand/20 focus:border-brand'"
                             />
-                            <button type="button" @click="showPw = !showPw"
+                            <button type="button" @click="showPw = !showPw" :aria-label="showPw ? 'Hide password' : 'Show password'"
                                     class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                                 <i data-lucide="eye" class="w-4 h-4" x-show="!showPw"></i>
                                 <i data-lucide="eye-off" class="w-4 h-4" x-show="showPw"></i>
                             </button>
                         </div>
+                        <p id="password-error" x-show="passwordInvalid" x-cloak x-transition.opacity.duration.150ms
+                           class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-red-600">
+                            <i data-lucide="circle-alert" class="w-3.5 h-3.5 mt-px shrink-0"></i>
+                            <span x-text="passwordError"></span>
+                        </p>
                     </div>
 
                     <button

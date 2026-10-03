@@ -68,6 +68,10 @@ QUEUE_CONNECTION=database
 REDIS_CLIENT=predis
 
 MAIL_MAILER=log
+
+# The login page only accepts emails ending in @ this domain (live check while typing).
+# example.com matches the demo accounts; production uses optimusbank.com (the default).
+STAFF_EMAIL_DOMAIN=example.com
 ```
 
 Create the tables and the demo data, then start the app:

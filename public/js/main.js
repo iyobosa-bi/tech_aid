@@ -12,14 +12,66 @@ function loginPage() {
         loginError: '',
         routes: {},
 
+        // Live validation. A field's error shows once it's "touched" — after a short pause
+        // in typing, on leaving the field, or on submit — then updates on every keystroke.
+        email: '',
+        password: '',
+        touched: { email: false, password: false },
+        emailDomain: '',
+        minPasswordLength: 8,
+
         init() {
             this.routes = {
                 verify: this.$el.dataset.verifyUrl,
                 resend: this.$el.dataset.resendUrl,
                 cancel: this.$el.dataset.cancelUrl,
             };
+            this.emailDomain = (this.$el.dataset.emailDomain || '').toLowerCase();
+            this.email = this.$el.dataset.oldEmail || '';
 
             setTimeout(() => this.revealed = true, 100);
+        },
+
+        get emailError() {
+            const value = this.email.trim();
+
+            if (!value) return 'Email is required.';
+            if (this.emailDomain && !value.toLowerCase().endsWith('@' + this.emailDomain)) {
+                return `Email must end with @${this.emailDomain}.`;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                return `Enter a valid email address, e.g. name@${this.emailDomain || 'example.com'}.`;
+            }
+
+            return '';
+        },
+
+        get passwordError() {
+            if (!this.password) return 'Password is required.';
+            if (this.password.length < this.minPasswordLength) {
+                return `Password must be at least ${this.minPasswordLength} characters.`;
+            }
+
+            return '';
+        },
+
+        get emailInvalid() {
+            return this.touched.email && this.emailError !== '';
+        },
+
+        get passwordInvalid() {
+            return this.touched.password && this.passwordError !== '';
+        },
+
+        // Runs on submit: shows every error at once and focuses the first bad field.
+        validate() {
+            this.touched.email = true;
+            this.touched.password = true;
+
+            if (this.emailError) this.$refs.emailInput.focus();
+            else if (this.passwordError) this.$refs.passwordInput.focus();
+
+            return !this.emailError && !this.passwordError;
         },
 
         csrfToken() {
@@ -51,6 +103,10 @@ function loginPage() {
             this.loginError = '';
             this.otpError = '';
             this.resendMessage = '';
+
+            // Don't spend a server round trip (or a rate-limited attempt) on input that can't succeed.
+            if (!this.validate()) return;
+
             this.loggingIn = true;
 
             try {
@@ -98,12 +154,12 @@ function loginPage() {
         },
     
 
+        // Untouches the field too, so "Password is required" doesn't pile on top of the server's message.
         clearPassword() {
             this.showPw = false;
-            if (this.$refs.passwordInput) {
-                this.$refs.passwordInput.value = '';
-                this.$refs.passwordInput.focus();
-            }
+            this.password = '';
+            this.touched.password = false;
+            this.$refs.passwordInput?.focus();
         },
 
         // The server only includes debug_code when APP_ENV=local and APP_DEBUG=true.
@@ -190,9 +246,8 @@ function loginPage() {
                 this.code = ['', '', '', '', '', ''];
                 this.otpError = '';
                 this.resendMessage = '';
-                if (this.$refs.passwordInput) {
-                    this.$refs.passwordInput.value = '';
-                }
+                this.password = '';
+                this.touched.password = false;
             }
         },
     };
