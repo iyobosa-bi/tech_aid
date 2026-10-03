@@ -74,6 +74,10 @@ function loginPage() {
                         data.errors?.email?.[0] ||
                         'Invalid email or password.';
 
+                    // The form never reloads (fetch), so clear the rejected password ourselves.
+                    // The email stays filled in so the user only retypes the password.
+                    this.clearPassword();
+
                     return;
                 }
 
@@ -93,6 +97,14 @@ function loginPage() {
             }
         },
     
+
+        clearPassword() {
+            this.showPw = false;
+            if (this.$refs.passwordInput) {
+                this.$refs.passwordInput.value = '';
+                this.$refs.passwordInput.focus();
+            }
+        },
 
         // The server only includes debug_code when APP_ENV=local and APP_DEBUG=true.
         logDebugCode(data) {
