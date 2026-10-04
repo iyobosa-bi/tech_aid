@@ -7,6 +7,7 @@ use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -49,6 +50,9 @@ class LoginRequest extends FormRequest
         if (! Auth::validate($this->only('email', 'password'))) {
             RateLimiter::hit($this->throttleKey());
 
+            // The reason is for operators only — the user still sees the same generic message.
+            $this->logFailedLogin(User::where('email', $this->string('email'))->exists() ? 'wrong_password' : 'unknown_email');
+
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
@@ -56,7 +60,16 @@ class LoginRequest extends FormRequest
 
         RateLimiter::clear($this->throttleKey());
 
-        return User::where('email', $this->string('email'))->firstOrFail();
+        $user = User::where('email', $this->string('email'))->firstOrFail();
+
+        // Step 1 of 2: the password checked out. The session itself starts at "OTP verified".
+        Log::channel('activity')->info('Login succeeded', [
+            'user_id' => $user->id,
+            'username' => $user->username(),
+            'ip' => $this->ip(),
+        ]);
+
+        return $user;
     }
 
     /**
@@ -71,6 +84,7 @@ class LoginRequest extends FormRequest
         }
 
         event(new Lockout($this));
+        $this->logFailedLogin('too_many_attempts');
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
@@ -79,6 +93,19 @@ class LoginRequest extends FormRequest
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
+        ]);
+    }
+
+    /**
+     * Activity log entry for a rejected sign-in. Records what was typed in the email
+     * field and where from — never the password.
+     */
+    private function logFailedLogin(string $reason): void
+    {
+        Log::channel('activity')->warning('Login failed', [
+            'email_attempted' => (string) $this->string('email'),
+            'ip' => $this->ip(),
+            'reason' => $reason,
         ]);
     }
 

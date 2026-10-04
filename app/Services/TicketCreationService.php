@@ -3,11 +3,13 @@
 namespace App\Services;
 
 use App\Enums\TicketStatus;
+use App\Events\TicketCreated;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\TicketAwaitingApproval;
 use App\Repositories\TicketRepository;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -26,6 +28,12 @@ class TicketCreationService
      */
     public function create(User $requester, array $data): Ticket
     {
+        // First thing, so attempts that fail below (no line manager, expired upload) are recorded too.
+        Log::channel('activity')->info('Ticket creation attempted', [
+            'user_id' => $requester->id,
+            'username' => $requester->username(),
+        ]);
+
         if (! $requester->line_manager_id) {
             throw ValidationException::withMessages([
                 'line_manager' => 'You have no line manager assigned, so this ticket cannot be routed for approval. Please contact an administrator.',
@@ -73,6 +81,9 @@ class TicketCreationService
         foreach ($uploadIds as $id) {
             $this->uploads->forget($id);
         }
+
+        // After the commit, so listeners (e.g. LogTicketActivity) only ever see saved tickets.
+        TicketCreated::dispatch($ticket, $requester);
 
         $ticket->lineManager->notify(new TicketAwaitingApproval($ticket));
          

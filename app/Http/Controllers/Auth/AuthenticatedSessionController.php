@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -85,6 +86,8 @@ class AuthenticatedSessionController extends Controller
         $userId = $request->session()->get('login.otp.user_id');
 
         if (! $userId) {
+            $this->logFailedOtp($request, 'session_expired');
+
             return response()->json([
                 'message' => 'Your session has expired. Please log in again.',
             ], 419);
@@ -98,6 +101,8 @@ class AuthenticatedSessionController extends Controller
             ->first();
 
         if (! $otp || ! Hash::check($request->string('code'), $otp->code)) {
+            $this->logFailedOtp($request, $otp ? 'wrong_code' : 'no_active_code', User::find($userId));
+
             return response()->json([
                 'message' => 'Invalid or expired code.',
             ], 422);
@@ -110,8 +115,12 @@ class AuthenticatedSessionController extends Controller
         Auth::login($user);
         $request->session()->forget('login.otp.user_id');
         $request->session()->regenerate();
-         
-        
+
+        Log::channel('activity')->info('OTP verified', [
+            'user_id' => $user->id,
+            'username' => $user->username(),
+        ]);
+
         return response()->json([
             'redirect' => route('dashboard'),
         ]);
@@ -184,7 +193,27 @@ class AuthenticatedSessionController extends Controller
 
         $user->notify(new LoginOtpCode($code));
 
+        // Who the code is for — never the code itself.
+        Log::channel('activity')->info('OTP generated', [
+            'user_id' => $user->id,
+            'username' => $user->username(),
+        ]);
+
         return $code;
+    }
+
+    /**
+     * Activity log entry for a rejected code. $user is null when the pending login has
+     * already expired. The submitted digits are never logged.
+     */
+    private function logFailedOtp(Request $request, string $reason, ?User $user = null): void
+    {
+        Log::channel('activity')->warning('OTP verification failed', array_filter([
+            'user_id' => $user?->id,
+            'username' => $user?->username(),
+            'reason' => $reason,
+            'ip' => $request->ip(),
+        ]));
     }
 
     /**

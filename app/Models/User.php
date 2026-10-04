@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'line_manager_id', 'department'])]
@@ -38,6 +39,16 @@ class User extends Authenticatable
     public function otpCodes(): HasMany
     {
         return $this->hasMany(OtpCode::class);
+    }
+
+    /**
+     * Short handle for logs, e.g. "adaeze.okafor" for adaeze.okafor@optimusbank.com.
+     * There's no username column; staff emails share one domain, so the part before
+     * the @ is already unique.
+     */
+    public function username(): string
+    {
+        return Str::before($this->email, '@');
     }
 
     public function handlesTickets(): bool

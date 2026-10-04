@@ -73,6 +73,21 @@ return [
             'replace_placeholders' => true,
         ],
 
+        /*
+         * Human-readable record of what people did (sign-ins, OTP checks, ticket actions),
+         * kept apart from laravel.log, which stays for framework errors and stack traces.
+         * Write to it with Log::channel('activity')->info('Ticket created', [...context]):
+         * a short past-tense message plus identifying/business fields only — never
+         * passwords, OTP codes or tokens. One file per day: activity-YYYY-MM-DD.log.
+         */
+        'activity' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/activity.log'),
+            'level' => 'info',
+            'max_files' => 90, // days of history kept
+            'replace_placeholders' => true,
+        ],
+
         'monthly' => [
             'driver' => 'monthly',
             'path' => storage_path('logs/laravel.log'),
