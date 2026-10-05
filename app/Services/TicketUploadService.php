@@ -2,9 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\Ticket;
+use App\Models\User;
+use App\Repositories\TicketRepository;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Holds FilePond's async uploads in a temporary area until the ticket form is
@@ -16,6 +20,8 @@ class TicketUploadService
     private const SESSION_KEY = 'ticket_uploads';
 
     private const TEMP_DIRECTORY = 'tmp/ticket-uploads';
+
+    public function __construct(private readonly TicketRepository $tickets) {}
 
     public function stash(UploadedFile $file): string
     {
@@ -52,5 +58,61 @@ class TicketUploadService
     public function forget(string $id): void
     {
         session()->forget(self::SESSION_KEY.'.'.$id);
+    }
+
+    /**
+     * Looks up every submitted upload id, before anything is saved — so an expired upload
+     * fails the whole form instead of leaving a half-saved ticket.
+     *
+     * @param  list<string>  $ids
+     * @return list<array{path: string, original_filename: string, mime_type: string, size: int}>
+     *
+     * @throws ValidationException
+     */
+    public function resolveAll(array $ids): array
+    {
+        return array_map(function (string $id) {
+            $upload = $this->find($id);
+
+            if (! $upload || ! Storage::exists($upload['path'])) {
+                throw ValidationException::withMessages([
+                    'attachments' => 'One of your attachments has expired or is no longer available. Please remove it and upload it again.',
+                ]);
+            }
+
+            return $upload;
+        }, $ids);
+    }
+
+    /**
+     * Moves resolved uploads into the ticket's folder and records them. Call inside the
+     * ticket's DB::transaction so the rows and the ticket change commit together.
+     *
+     * @param  list<array{path: string, original_filename: string, mime_type: string, size: int}>  $uploads
+     */
+    public function attachAll(Ticket $ticket, User $uploader, array $uploads): void
+    {
+        foreach ($uploads as $upload) {
+            $path = 'tickets/'.$ticket->id.'/'.basename($upload['path']);
+            Storage::move($upload['path'], $path);
+
+            $this->tickets->addAttachment($ticket, [
+                'uploaded_by_id' => $uploader->id,
+                'file_path' => $path,
+                'original_filename' => $upload['original_filename'],
+                'mime_type' => $upload['mime_type'],
+                'size' => $upload['size'],
+            ]);
+        }
+    }
+
+    /**
+     * @param  list<string>  $ids
+     */
+    public function forgetAll(array $ids): void
+    {
+        foreach ($ids as $id) {
+            $this->forget($id);
+        }
     }
 }

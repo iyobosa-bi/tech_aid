@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\TicketAction;
 use App\Enums\TicketStatus;
 use App\Events\TicketCreated;
 use App\Models\Ticket;
@@ -10,7 +11,6 @@ use App\Notifications\TicketAwaitingApproval;
 use App\Repositories\TicketRepository;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class TicketCreationService
@@ -41,7 +41,7 @@ class TicketCreationService
         }
 
         $uploadIds = $data['attachments'] ?? [];
-        $uploads = $this->resolveUploads($uploadIds);
+        $uploads = $this->uploads->resolveAll($uploadIds);
 
         $ticket = DB::transaction(function () use ($requester, $data, $uploads) {
             $ticket = $this->tickets->create([
@@ -54,23 +54,12 @@ class TicketCreationService
                 'status' => TicketStatus::PendingLineManagerApproval->value,
             ]);
 
-            foreach ($uploads as $upload) {
-                $path = 'tickets/'.$ticket->id.'/'.basename($upload['path']);
-                Storage::move($upload['path'], $path);
-
-                $this->tickets->addAttachment($ticket, [
-                    'uploaded_by_id' => $requester->id,
-                    'file_path' => $path,
-                    'original_filename' => $upload['original_filename'],
-                    'mime_type' => $upload['mime_type'],
-                    'size' => $upload['size'],
-                ]);
-            }
+            $this->uploads->attachAll($ticket, $requester, $uploads);
 
             $this->tickets->logHistory($ticket, [
                 'actor_id' => $requester->id,
                 'actor_role' => $requester->getRoleNames()->first(),
-                'action' => 'created',
+                'action' => TicketAction::Created->value,
                 'from_status' => null,
                 'to_status' => TicketStatus::PendingLineManagerApproval->value,
             ]);
@@ -78,38 +67,13 @@ class TicketCreationService
             return $ticket;
         });
 
-        foreach ($uploadIds as $id) {
-            $this->uploads->forget($id);
-        }
+        $this->uploads->forgetAll($uploadIds);
 
         // After the commit, so listeners (e.g. LogTicketActivity) only ever see saved tickets.
         TicketCreated::dispatch($ticket, $requester);
 
         $ticket->lineManager->notify(new TicketAwaitingApproval($ticket));
-         
+
         return $ticket;
-    }
-
-    /**
-     * @param  list<string>  $ids
-     * @return list<array{path: string, original_filename: string, mime_type: string, size: int}>
-     */
-    private function resolveUploads(array $ids): array
-    {
-        $uploads = [];
-
-        foreach ($ids as $id) {
-            $upload = $this->uploads->find($id);
-
-            if (! $upload || ! Storage::exists($upload['path'])) {
-                throw ValidationException::withMessages([
-                    'attachments' => 'One of your attachments has expired or is no longer available. Please remove it and upload it again.',
-                ]);
-            }
-
-            $uploads[] = $upload;
-        }
-
-        return $uploads;
     }
 }

@@ -17,6 +17,10 @@ resolution chain:
 | **Raise a ticket**  | Title, description, category and priority. Up to 5 attachments via FilePond (10 MB each; jpg, png, pdf, doc, docx). The ticket starts as `pending_line_manager_approval`, the action is written to the audit history, and the Line Manager is notified by email and in-app (queued). |
 | **Ticket list** | Live search as you type (ticket ID or title, plus requester name for handlers), a status filter, sortable columns and 15 per page. Each user sees only their own slice: Head of Service Management sees every ticket; everyone else sees tickets they raised, manage or are assigned to. On narrow screens the table scrolls sideways with the ID column pinned. |
 | **Dashboard** | Four stat cards specific to the user's role (for example, *Pending My Approval* for Line Managers and *Avg Resolution Time* for Head of Service Management). Below them, the 5 most recent tickets in the same table as the Tickets page. |
+| **Ticket page** | Opens from the ticket's title. Shows details, attachments (images and PDFs open in a quick-view popup; every file can be downloaded; Word files are download-only), a status-history timeline, and a conversation thread that everyone on the ticket can see and reply to. New messages notify the other participants. |
+| **Approve / decline** (Flow 3) | Only the ticket's own Line Manager, only while it's pending. Both go through a confirmation popup. A decline needs a comment and returns the ticket to the requester as *Returned* (not closed). Head of Service Management is notified on approval, and the requester on a decline. |
+| **Edit & resubmit** (Flow 4) | The requester edits a returned ticket, optionally adds files (up to 5 in total) and a note, and sends it back to their Line Manager. |
+| **Activity log** | `storage/logs/activity-YYYY-MM-DD.log`, kept for 90 days: sign-ins, OTP checks, and every ticket action, recorded as who and what. Never passwords, codes or message text. |
 | **404 page** | Branded "Page not found" page. It offers *Back to dashboard* if you're signed in, or *Go to sign in* if you're not. |
 
 

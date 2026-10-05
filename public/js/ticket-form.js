@@ -19,6 +19,9 @@ function ticketForm(config) {
         pond: null,
 
         init() {
+            // No file input when an edited ticket already has the maximum number of files.
+            if (!this.$refs.attachments) return;
+
             FilePond.registerPlugin(FilePondPluginFileValidateType, FilePondPluginFileValidateSize);
 
             const headers = {
@@ -76,6 +79,8 @@ function ticketForm(config) {
         },
 
         syncUploadState() {
+            if (!this.pond) return;
+
             const S = FilePond.FileStatus;
             const files = this.pond.getFiles();
 

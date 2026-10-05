@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Enums\TicketAction;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketStatusHistory;
@@ -62,6 +63,54 @@ class TicketRepository
     public function recentVisibleTo(User $user, int $limit): Collection
     {
         return $this->visibleTo($user)->latest()->orderBy('id', 'desc')->limit($limit)->get();
+    }
+
+    /**
+     * Everything the ticket page shows, in display order: history oldest first.
+     */
+    public function loadForDetail(Ticket $ticket): Ticket
+    {
+        return $ticket->load([
+            'requester', 'lineManager', 'assignedTo',
+            'attachments' => fn ($query) => $query->orderBy('id'),
+            'statusHistory' => fn ($query) => $query->with('actor')->orderBy('created_at')->orderBy('id'),
+        ]);
+    }
+
+    /**
+     * Re-reads the ticket and locks its row until the surrounding transaction ends, so two
+     * simultaneous actions (e.g. approve in two tabs) can't both act on the same status.
+     */
+    public function lockForUpdate(Ticket $ticket): Ticket
+    {
+        return Ticket::query()->lockForUpdate()->findOrFail($ticket->id);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function update(Ticket $ticket, array $attributes): Ticket
+    {
+        $ticket->update($attributes);
+
+        return $ticket;
+    }
+
+    /**
+     * People on the ticket — requester, line manager, assignee, assigner and anyone who has
+     * joined the conversation — other than $except. Deactivated users are left out.
+     *
+     * @return Collection<int, User>
+     */
+    public function participantsExcept(Ticket $ticket, User $except): Collection
+    {
+        $ids = collect([$ticket->requester_id, $ticket->line_manager_id, $ticket->assigned_to_id, $ticket->assigned_by_id])
+            ->merge($ticket->statusHistory()->where('action', TicketAction::Commented->value)->pluck('actor_id'))
+            ->filter()
+            ->unique()
+            ->reject(fn ($id) => $id === $except->id);
+
+        return User::query()->whereIn('id', $ids)->get();
     }
 
     // Same visibility rule (Ticket::scopeVisibleTo) and columns for every ticket listing.
