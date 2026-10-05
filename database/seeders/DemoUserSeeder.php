@@ -48,7 +48,7 @@ class DemoUserSeeder extends Seeder
         if (! $user->email_verified_at) {
             $user->forceFill(['email_verified_at' => now()])->save();
         }
-        
+
         $user->assignRole($role->value);
 
         return $user;
