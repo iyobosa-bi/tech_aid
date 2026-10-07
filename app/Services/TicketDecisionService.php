@@ -26,7 +26,6 @@ class TicketDecisionService
         private readonly TicketTransitionService $transitions,
         private readonly UserRepository $users,
     ) {}
-
     // The comment is saved on the approval's history entry, so it shows in the conversation.
     public function approve(Ticket $ticket, User $manager, ?string $comment = null): Ticket
     {

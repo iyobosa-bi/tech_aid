@@ -60,12 +60,16 @@ return [
     |--------------------------------------------------------------------------
     |
     | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | will be used by the PHP date and date-time functions.
+    |
+    | Tech Aid runs in Lagos (WAT, UTC+1, no daylight saving), so times are
+    | stored and shown in Africa/Lagos: the audit trail, the screens and the
+    | Postgres server clock all read the same wall-clock time, and "this month"
+    | starts at local midnight.
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'Africa/Lagos'),
 
     /*
     |--------------------------------------------------------------------------

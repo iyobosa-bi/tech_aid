@@ -13,7 +13,7 @@ class TicketStatusHistory extends Model
     protected $fillable = [
         'ticket_id',
         'actor_id',
-        'actor_role',
+        'actor_role', // role of the person who did this, not who has the ticket next (see to_status)
         'action',
         'from_status',
         'to_status',
