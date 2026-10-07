@@ -8,6 +8,7 @@ use App\Events\TicketResubmitted;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\TicketAwaitingApproval;
+use App\Notifications\TicketStatusUpdated;
 use Illuminate\Support\Arr;
 
 /**
@@ -41,6 +42,7 @@ class TicketResubmissionService
 
         TicketResubmitted::dispatch($ticket, $requester);
         $ticket->lineManager->notify(new TicketAwaitingApproval($ticket, resubmitted: true));
+        $requester->notify(new TicketStatusUpdated($ticket, TicketStatus::PendingLineManagerApproval));
 
         return $ticket;
     }

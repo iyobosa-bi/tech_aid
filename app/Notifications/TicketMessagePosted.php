@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\NotificationType;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -29,6 +30,11 @@ class TicketMessagePosted extends Notification implements ShouldQueue
     public function via(object $notifiable): array
     {
         return ['mail', 'database'];
+    }
+
+    public function databaseType(object $notifiable): string
+    {
+        return NotificationType::Message->value;
     }
 
     public function toMail(object $notifiable): MailMessage

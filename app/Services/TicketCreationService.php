@@ -8,6 +8,7 @@ use App\Events\TicketCreated;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\TicketAwaitingApproval;
+use App\Notifications\TicketStatusUpdated;
 use App\Repositories\TicketRepository;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -73,6 +74,7 @@ class TicketCreationService
         TicketCreated::dispatch($ticket, $requester);
 
         $ticket->lineManager->notify(new TicketAwaitingApproval($ticket));
+        $requester->notify(new TicketStatusUpdated($ticket, TicketStatus::PendingLineManagerApproval));
 
         return $ticket;
     }

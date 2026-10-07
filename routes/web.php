@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\TicketCommentController;
@@ -27,6 +28,14 @@ Route::middleware(['auth', 'cache.headers:no_store'])->group(function () {
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
     Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [TicketController::class, 'store'])->name('tickets.store');
+
+    // Flow 10: the bell polls /feed; the page lists everything. Only the user's own notifications.
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/feed', [NotificationController::class, 'feed'])
+        ->middleware('throttle:120,1')->name('notifications.feed');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::get('/notifications/{notification}/open', [NotificationController::class, 'open'])
+        ->whereUuid('notification')->name('notifications.open');
 
     Route::post('/tickets/uploads', [TicketUploadController::class, 'store'])
         ->middleware('throttle:30,1')->name('tickets.uploads.store');

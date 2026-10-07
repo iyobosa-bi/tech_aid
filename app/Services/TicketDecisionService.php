@@ -11,6 +11,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\TicketAwaitingAssignment;
 use App\Notifications\TicketReturned;
+use App\Notifications\TicketStatusUpdated;
 use App\Repositories\UserRepository;
 use Illuminate\Support\Facades\Notification;
 
@@ -38,11 +39,13 @@ class TicketDecisionService
 
         TicketApproved::dispatch($ticket, $manager);
         Notification::send($this->users->withRole(RoleName::HeadOfServiceManagement), new TicketAwaitingAssignment($ticket));
+        $ticket->requester->notify(new TicketStatusUpdated($ticket, TicketStatus::PendingAssignment));
 
         return $ticket;
     }
 
-    // The ticket goes back to the requester with the comment — it is NOT closed.
+    // The ticket goes back to the requester with the comment — it is NOT closed. TicketReturned
+    // is the requester's update for this step (email + in-app), so no TicketStatusUpdated here.
     public function decline(Ticket $ticket, User $manager, string $comment): Ticket
     {
         $ticket = $this->transitions->move(

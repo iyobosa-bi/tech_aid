@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\DB;
  */
 class TicketTransitionService
 {
+
+
     public function __construct(private readonly TicketRepository $tickets) {}
 
     /**

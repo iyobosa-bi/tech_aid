@@ -39,7 +39,7 @@
 </head>
 <body class="h-full overflow-hidden">
 
-<div x-data="{ sidebarOpen: false, notifOpen: false }" class="h-full flex">
+<div x-data="{ sidebarOpen: false }" class="h-full flex">
 
     <!-- Mobile topbar -->
     <div class="lg:hidden fixed top-0 left-0 right-0 z-30 h-14 flex items-center justify-between px-4 bg-white border-b border-gray-100 shadow-sm">
@@ -56,10 +56,15 @@
             </div>
             <span class="font-display font-bold text-brand text-sm">Tech Aid</span>
         </div>
-        <button @click="sidebarOpen = !sidebarOpen" class="text-brand">
-            <i data-lucide="menu" class="w-5 h-5" x-show="!sidebarOpen"></i>
-            <i data-lucide="x" class="w-5 h-5" x-show="sidebarOpen"></i>
-        </button>
+        <div class="flex items-center gap-3">
+            @if ($notificationFeed)
+                @include('partials.notification-bell')
+            @endif
+            <button @click="sidebarOpen = !sidebarOpen" class="text-brand">
+                <i data-lucide="menu" class="w-5 h-5" x-show="!sidebarOpen"></i>
+                <i data-lucide="x" class="w-5 h-5" x-show="sidebarOpen"></i>
+            </button>
+        </div>
     </div>
 
     <!-- Sidebar -->
@@ -99,6 +104,11 @@
             </a>
 
             <p class="font-display text-[10px] uppercase tracking-wider text-white/40 px-3 mb-2 mt-6">Account</p>
+            <a href="{{ route('notifications.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
+                      {{ request()->routeIs('notifications.*') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
+                <i data-lucide="bell" class="w-4 h-4"></i> Notifications
+            </a>
             <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white text-sm">
                 <i data-lucide="settings" class="w-4 h-4"></i> Settings
             </a>
@@ -136,22 +146,9 @@
                 <p class="text-xs text-gray-400 mt-0.5">optimusbank.com · welcome back, {{ explode(' ', auth()->user()->name ?? 'there')[0] }}</p>
             </div>
             <div class="flex items-center gap-4">
-                <div class="relative">
-                    <button @click="notifOpen = !notifOpen" class="relative w-9 h-9 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100">
-                        <i data-lucide="bell" class="w-4 h-4"></i>
-                        <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-brand text-white text-[9px] font-bold flex items-center justify-center">3</span>
-                    </button>
-                    <div x-show="notifOpen" x-cloak @click.outside="notifOpen = false"
-                         class="absolute right-0 mt-2 w-80 bg-white border border-gray-100 rounded-xl shadow-xl z-30">
-                        <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                            <span class="text-xs font-semibold text-gray-600">Notifications</span>
-                            <span class="text-[11px] text-brand cursor-pointer">mark all read</span>
-                        </div>
-                        <div class="divide-y divide-gray-50 max-h-72 overflow-y-auto" id="notification-list">
-                            {{-- populated via Alpine setInterval + fetch() polling, see docs/06-data-model.md --}}
-                        </div>
-                    </div>
-                </div>
+                @if ($notificationFeed)
+                    @include('partials.notification-bell')
+                @endif
                 <a href="{{ Route::has('tickets.create') ? route('tickets.create') : '#' }}" class="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white font-display font-semibold text-xs px-4 py-2.5 rounded-lg transition-colors">
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i> New Ticket
                 </a>
@@ -182,6 +179,11 @@
         if (event.persisted) window.location.reload();
     });
 </script>
+@if ($notificationFeed)
+    {{-- The bell's first feed (NotificationBellComposer); notifications.js polls for updates. --}}
+    <script type="application/json" id="notification-feed" data-url="{{ route('notifications.feed') }}">@json($notificationFeed)</script>
+    <script src="{{ asset('js/notifications.js') }}?v={{ filemtime(public_path('js/notifications.js')) }}"></script>
+@endif
 @stack('scripts')
 </body>
 </html>

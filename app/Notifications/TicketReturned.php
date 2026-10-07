@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\NotificationType;
 use App\Models\Ticket;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,6 +30,11 @@ class TicketReturned extends Notification implements ShouldQueue
         return ['mail', 'database'];
     }
 
+    public function databaseType(object $notifiable): string
+    {
+        return NotificationType::Returned->value;
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
@@ -49,7 +55,7 @@ class TicketReturned extends Notification implements ShouldQueue
             'ticket_id' => $this->ticket->id,
             'ticket_number' => $this->ticket->ticket_number,
             'title' => $this->ticket->title,
-            'message' => "{$this->ticket->lineManager->name} returned {$this->ticket->ticket_number} to you.",
+            'message' => "{$this->ticket->requester->name}, your ticket {$this->ticket->ticket_number} is RETURNED by {$this->ticket->lineManager->name}. Please edit and resubmit.",
         ];
     }
 }
