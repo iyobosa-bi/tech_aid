@@ -2,22 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ApproveTicketRequest;
 use App\Http\Requests\DeclineTicketRequest;
 use App\Models\Ticket;
 use App\Services\TicketDecisionService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 
 /**
  * Flow 3: the line manager approves or declines a ticket from its detail page.
  */
 class TicketDecisionController extends Controller
 {
-    public function approve(Request $request, Ticket $ticket, TicketDecisionService $decisions): RedirectResponse
+    // ApproveTicketRequest authorises (TicketPolicy::approve) and validates the optional comment.
+    public function approve(ApproveTicketRequest $request, Ticket $ticket, TicketDecisionService $decisions): RedirectResponse
     {
-        $this->authorize('approve', $ticket);
-
-        $ticket = $decisions->approve($ticket, $request->user());
+        $ticket = $decisions->approve($ticket, $request->user(), $request->validated('comment'));
 
         return redirect()
             ->route('tickets.show', $ticket)

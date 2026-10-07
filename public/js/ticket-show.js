@@ -1,8 +1,9 @@
 // Interactive parts of the ticket page (resources/views/tickets/show.blade.php).
 // Every action is still a normal form POST; these only manage the modals and inputs.
 
-// Line manager's decision. Approve = one confirmation step. Decline = a required
-// comment first, then a confirmation that shows the comment before anything is sent.
+// Line manager's decision. Approve = an optional comment and one confirmation step.
+// Decline = a required comment first, then a confirmation that shows the comment
+// before anything is sent.
 function ticketDecision(config) {
     return {
         modal: null, // 'approve' | 'decline' | null
@@ -10,11 +11,14 @@ function ticketDecision(config) {
         comment: config.comment ?? '',
         touched: false,
         serverError: config.error ?? '',
+        approveComment: config.approveComment ?? '',
+        approveServerError: config.approveError ?? '',
         submitting: false,
 
         init() {
-            // The server rejected the comment (e.g. the page's checks were bypassed): reopen with its message.
+            // The server rejected a comment (e.g. the page's checks were bypassed): reopen with its message.
             if (config.reopenDecline) this.openDecline();
+            if (config.reopenApprove) this.openApprove();
         },
 
         get commentError() {
@@ -33,7 +37,7 @@ function ticketDecision(config) {
 
         openApprove() {
             this.modal = 'approve';
-            this.$nextTick(() => this.$refs.approveConfirm.focus());
+            this.$nextTick(() => this.$refs.approveComment.focus());
         },
 
         openDecline() {

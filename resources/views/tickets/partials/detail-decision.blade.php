@@ -1,19 +1,29 @@
 {{--
     Line manager's Approve / Decline (Flow 3) — only included when TicketPolicy::approve allows.
-    Both go through a confirmation step in a modal; a decline needs a comment first.
+    Both go through a confirmation step in a modal. Approve takes an optional comment (blank
+    = TicketDecisionService::DEFAULT_APPROVAL_COMMENT); a decline needs a comment first.
+    Either comment is posted to the conversation.
     The forms are plain POSTs; ticket-show.js (ticketDecision) only drives the modal.
 --}}
+@use('App\Http\Requests\ApproveTicketRequest')
+@use('App\Services\TicketDecisionService')
 @php
     $requesterFirstName = explode(' ', $ticket->requester?->name ?? 'the requester')[0];
     $btn = 'inline-flex items-center justify-center gap-2 rounded-lg font-display font-semibold text-sm px-4 py-2.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40';
+    // Approve errors live in their own bag (ApproveTicketRequest), so old('comment') goes back to the right box.
+    $approveFailed = $errors->approve->has('comment');
+    $declineFailed = $errors->has('comment');
 @endphp
 
 <div x-data="ticketDecision(@js([
-        'reopenDecline' => $errors->has('comment'),
-        'comment' => old('comment', ''),
+        'reopenDecline' => $declineFailed,
+        'comment' => $declineFailed ? old('comment', '') : '',
         'error' => $errors->first('comment'),
         'minLength' => 5,
         'maxLength' => 1000,
+        'reopenApprove' => $approveFailed,
+        'approveComment' => $approveFailed ? old('comment', '') : '',
+        'approveError' => $errors->approve->first('comment'),
      ]))"
      class="flex flex-col-reverse sm:flex-row gap-2">
 
@@ -29,10 +39,10 @@
          role="dialog" aria-modal="true" :aria-labelledby="modal === 'approve' ? 'approve-title' : 'decline-title'">
         <div x-show="modal" x-transition.opacity class="absolute inset-0 bg-gray-900/50" @click="close()"></div>
 
-        {{-- Approve: confirmation only --}}
+        {{-- Approve: optional comment + confirmation --}}
         <div x-show="modal === 'approve'"
              x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-3 sm:translate-y-0 sm:scale-95"
-             class="relative w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
+             class="relative w-full max-w-lg bg-white rounded-xl shadow-2xl p-6">
             <div class="w-11 h-11 rounded-full bg-teal/15 text-teal-700 flex items-center justify-center mb-4">
                 <i data-lucide="check" class="w-5 h-5"></i>
             </div>
@@ -40,10 +50,28 @@
             <p class="text-sm text-gray-600 mt-1.5 leading-relaxed">
                 It moves to Head of Service Management to be assigned to a support engineer, and {{ $requesterFirstName }} will see the update. This can't be undone.
             </p>
-            <form x-ref="approveForm" method="POST" action="{{ route('tickets.approve', $ticket) }}">@csrf</form>
+
+            <form x-ref="approveForm" method="POST" action="{{ route('tickets.approve', $ticket) }}" @submit.prevent novalidate>
+                @csrf
+                <label for="approve-comment" class="block text-sm font-medium text-gray-700 mt-5 mb-1.5">
+                    Comment <span class="font-normal text-gray-500">(optional)</span>
+                </label>
+                <textarea id="approve-comment" name="comment" rows="3" maxlength="{{ ApproveTicketRequest::MAX_COMMENT_LENGTH }}"
+                          x-ref="approveComment" x-model="approveComment" @input="approveServerError = ''"
+                          placeholder="Leave blank to send “{{ TicketDecisionService::DEFAULT_APPROVAL_COMMENT }}”"
+                          :aria-invalid="(!!approveServerError).toString()" aria-describedby="approve-comment-help"
+                          class="w-full px-3.5 py-2.5 rounded-lg border text-sm text-gray-900 placeholder:text-gray-400 resize-y focus:outline-none focus:ring-2"
+                          :class="approveServerError ? 'border-red-400 bg-red-50/40 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-200 focus:ring-brand/20 focus:border-brand'"></textarea>
+                <div class="flex items-start justify-between gap-3 mt-1.5">
+                    <p id="approve-comment-help" class="text-xs" :class="approveServerError ? 'font-medium text-red-600' : 'text-gray-500'"
+                       x-text="approveServerError || 'Shared in the conversation with everyone on this ticket.'">Shared in the conversation with everyone on this ticket.</p>
+                    <span class="ml-auto text-[11px] text-gray-500 tabular-nums" x-text="`${approveComment.length}/{{ ApproveTicketRequest::MAX_COMMENT_LENGTH }}`"></span>
+                </div>
+            </form>
+
             <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                 <button type="button" @click="close()" :disabled="submitting" class="{{ $btn }} border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button type="button" x-ref="approveConfirm" @click="submit('approveForm')" :disabled="submitting" class="{{ $btn }} bg-brand hover:bg-brand-dark text-white">
+                <button type="button" @click="submit('approveForm')" :disabled="submitting" class="{{ $btn }} bg-brand hover:bg-brand-dark text-white">
                     <span x-show="!submitting">Yes, approve</span>
                     <span x-show="submitting" x-cloak>Approving…</span>
                 </button>
