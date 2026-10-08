@@ -10,8 +10,10 @@
      data-old-email="{{ old('email') }}"
      class="h-full flex"
 >
+    {{-- Both panels go inert while the OTP modal is open: nothing behind it can be focused, clicked or typed into. --}}
     <div
         x-show="revealed"
+        x-effect="$el.inert = otpOpen"
         x-transition:enter="transition ease-out duration-500"
         x-transition:enter-start="opacity-0 -translate-x-4"
         x-transition:enter-end="opacity-100 translate-x-0"
@@ -47,7 +49,7 @@
     </div>
 
     <!-- RIGHT: full-bleed photo + floating card -->
-    <div class="flex-1 relative overflow-hidden bg-brand-dark">
+    <div class="flex-1 relative overflow-hidden bg-brand-dark" x-effect="$el.inert = otpOpen">
         <img src="{{ asset('images/login-bg.svg') }}" alt="" class="absolute inset-0 w-full h-full object-cover" />
 
         <!-- dark overlay, mobile only — improves contrast since blue panel is hidden -->
@@ -172,28 +174,31 @@
     </div>
 
     <!-- OTP MODAL -->
-    <div x-show="otpOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div x-show="otpOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+         role="dialog" aria-modal="true" aria-labelledby="otp-title">
         <div class="w-full max-w-sm bg-white rounded-xl shadow-2xl p-6">
             <div class="flex items-center justify-between mb-1">
-                <h3 class="font-display font-bold text-lg text-brand">Verify your identity</h3>
+                <h3 id="otp-title" class="font-display font-bold text-lg text-brand">Verify your identity</h3>
             </div>
             <p class="text-sm text-gray-500 mb-6">Enter the 6-digit code sent to your email.</p>
 
-            <div class="flex gap-2 justify-between mb-4" x-ref="otpInputs">
+            <div class="flex gap-2 justify-between mb-8" x-ref="otpInputs">
                 <template x-for="(digit, i) in code" :key="i">
                     <input
                         type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="1"
                         x-model="code[i]"
                         @input="onDigitInput(i, $event)"
                         @keydown="onDigitKeydown(i, $event)"
-                        class="w-11 h-12 text-center text-lg font-semibold rounded-lg border border-gray-200
+                        :aria-label="`Digit ${i + 1} of 6`"
+                        class="w-11 sm:w-12 h-14 text-center text-xl font-semibold rounded-lg border border-gray-200
                                text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                     />
                 </template>
             </div>
 
-            <p x-show="otpError" x-cloak x-text="otpError" class="text-xs text-red-600 mb-4 text-center"></p>
-            <p x-show="resendMessage" x-cloak x-text="resendMessage" class="text-xs text-teal-600 mb-4 text-center"></p>
+            {{-- Pulled up under the boxes so the message reads as theirs, still clear of the Verify button. --}}
+            <p x-show="otpError" x-cloak x-text="otpError" class="-mt-4 mb-4 text-xs text-red-600 text-center" role="alert"></p>
+            <p x-show="resendMessage" x-cloak x-text="resendMessage" class="-mt-4 mb-4 text-xs text-teal-600 text-center" role="status"></p>
 
             <button type="button" @click="verify()" :disabled="verifying"
                     class="w-full inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark disabled:opacity-80 disabled:cursor-wait text-white text-sm font-semibold py-2.5 rounded-lg transition-colors mb-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40">

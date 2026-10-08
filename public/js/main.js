@@ -85,6 +85,25 @@ function loginPage() {
             }
         },
 
+        // Opens the OTP modal and moves the cursor into its first box. The password field
+        // loses focus straight away. The page behind is made inert (x-effect in login.blade.php),
+        // so it can't be clicked or tabbed back into.
+        openOtp() {
+            document.activeElement?.blur();
+            this.code = ['', '', '', '', '', ''];
+            this.otpOpen = true;
+            this.whenVisible(this.$refs.otpInputs, () => this.focusDigit(0));
+        },
+
+        // x-show reveals an element one animation frame *after* the state changes, and
+        // focus() on a still-hidden input is silently ignored, so wait until it's on screen.
+        whenVisible(el, callback, framesLeft = 10) {
+            requestAnimationFrame(() => {
+                if (el.offsetParent !== null || framesLeft === 0) callback();
+                else this.whenVisible(el, callback, framesLeft - 1);
+            });
+        },
+
         onDigitInput(i, event) {
             const digit = event.target.value.replace(/\D/g, '').slice(-1);
             this.code[i] = digit;
@@ -138,14 +157,8 @@ function loginPage() {
                 }
 
                 this.logDebugCode(data);
-                this.otpOpen = true;
-                this.code = ['', '', '', '', '', ''];
                 this.loginError = '';
-
-                this.$nextTick(() => {
-                    this.focusDigit(0);
-                });
-
+                this.openOtp();
             } catch (e) {
                 this.loginError = 'Something went wrong. Please try again.';
             } finally {
@@ -248,6 +261,8 @@ function loginPage() {
                 this.resendMessage = '';
                 this.password = '';
                 this.touched.password = false;
+                // Back on the form, ready for the other account's password.
+                this.whenVisible(this.$refs.passwordInput, () => this.$refs.passwordInput.focus());
             }
         },
     };
