@@ -71,8 +71,8 @@
                 </p>
                 <button type="submit" :disabled="sending || !body.trim()"
                         class="inline-flex items-center gap-2 rounded-lg bg-brand hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed text-white font-display font-semibold text-sm px-4 py-2 transition-colors">
-                    <i data-lucide="send" class="w-4 h-4"></i>
-                    <span x-text="sending ? 'Sending…' : 'Send'">Send</span>
+                    <span x-show="!sending" class="inline-flex items-center gap-2"><i data-lucide="send" class="w-4 h-4"></i> Send</span>
+                    <span x-show="sending" x-cloak class="inline-flex items-center gap-2" role="status">@include('partials.spinner') Sending</span>
                 </button>
             </div>
         </form>

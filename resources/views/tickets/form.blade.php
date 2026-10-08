@@ -202,8 +202,12 @@
                     :disabled="submitting || pendingUploads > 0 || {{ $lineManager ? 'false' : 'true' }}"
                     class="inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed text-white font-display font-semibold text-sm px-6 py-2.5 rounded-lg transition-colors">
                 <span x-show="!submitting && pendingUploads === 0" class="inline-flex items-center gap-2"><i data-lucide="send" class="w-4 h-4"></i> {{ $editing ? 'Resubmit for approval' : 'Submit Ticket' }}</span>
-                <span x-show="pendingUploads > 0 && !submitting" x-cloak>Uploading attachments…</span>
-                <span x-show="submitting" x-cloak>{{ $editing ? 'Resubmitting…' : 'Submitting…' }}</span>
+                <span x-show="pendingUploads > 0 && !submitting" x-cloak class="inline-flex items-center gap-2" role="status">
+                    @include('partials.spinner') Uploading attachments
+                </span>
+                <span x-show="submitting" x-cloak class="inline-flex items-center gap-2" role="status">
+                    @include('partials.spinner') {{ $editing ? 'Resubmitting' : 'Submitting' }}
+                </span>
             </button>
         </div>
     </form>

@@ -73,7 +73,7 @@
                 <button type="button" @click="close()" :disabled="submitting" class="{{ $btn }} border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">Cancel</button>
                 <button type="button" @click="submit('approveForm')" :disabled="submitting" class="{{ $btn }} bg-brand hover:bg-brand-dark text-white">
                     <span x-show="!submitting">Yes, approve</span>
-                    <span x-show="submitting" x-cloak>Approving…</span>
+                    <span x-show="submitting" x-cloak class="inline-flex items-center gap-2" role="status">@include('partials.spinner') Approving</span>
                 </button>
             </div>
         </div>
@@ -126,7 +126,7 @@
                     <button type="button" @click="step = 'comment'" :disabled="submitting" class="{{ $btn }} border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">Back</button>
                     <button type="button" x-ref="declineConfirm" @click="submit('declineForm')" :disabled="submitting" class="{{ $btn }} bg-red-600 hover:bg-red-700 text-white">
                         <span x-show="!submitting">Yes, decline ticket</span>
-                        <span x-show="submitting" x-cloak>Declining…</span>
+                        <span x-show="submitting" x-cloak class="inline-flex items-center gap-2" role="status">@include('partials.spinner') Declining</span>
                     </button>
                 </div>
             </div>
