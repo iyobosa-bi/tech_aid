@@ -159,10 +159,13 @@
                     <button
                         type="submit"
                         :disabled="loggingIn"
-                        class="w-full bg-gray-400 hover:bg-gray-500 disabled:opacity-60 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors mt-2"
+                        class="w-full inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark disabled:opacity-80 disabled:cursor-wait text-white text-sm font-semibold py-2.5 rounded-lg transition-colors mt-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40"
                         >
                         <span x-show="!loggingIn">Login</span>
-                        <span x-show="loggingIn" x-cloak>Signing in…</span>
+                        <span x-show="loggingIn" x-cloak class="inline-flex items-center gap-2" role="status">
+                            <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" aria-hidden="true"></span>
+                            Signing in
+                        </span>
                     </button>
                 </form>
             </div>
@@ -194,16 +197,22 @@
             <p x-show="resendMessage" x-cloak x-text="resendMessage" class="text-xs text-teal-600 mb-4 text-center"></p>
 
             <button type="button" @click="verify()" :disabled="verifying"
-                    class="w-full bg-gray-400 hover:bg-gray-500 disabled:opacity-60 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors mb-3">
+                    class="w-full inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark disabled:opacity-80 disabled:cursor-wait text-white text-sm font-semibold py-2.5 rounded-lg transition-colors mb-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40">
                 <span x-show="!verifying">Verify</span>
-                <span x-show="verifying" x-cloak>Verifying…</span>
+                <span x-show="verifying" x-cloak class="inline-flex items-center gap-2" role="status">
+                    <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" aria-hidden="true"></span>
+                    Verifying
+                </span>
             </button>
 
             <p class="text-xs text-center text-gray-400">
                 Didn't get a code?
                 <button type="button" @click="resend()" :disabled="resending" class="text-blue-600 font-medium disabled:opacity-60">
                     <span x-show="!resending">Resend</span>
-                    <span x-show="resending" x-cloak>Sending…</span>
+                    <span x-show="resending" x-cloak class="inline-flex items-center gap-1.5 align-middle" role="status">
+                        <span class="w-3 h-3 rounded-full border-2 border-brand/30 border-t-brand animate-spin" aria-hidden="true"></span>
+                        Sending
+                    </span>
                 </button>
             </p>
 
