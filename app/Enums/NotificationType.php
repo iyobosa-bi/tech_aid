@@ -11,6 +11,8 @@ enum NotificationType: string
 {
     case ApprovalRequested = 'approval-requested';
     case AssignmentRequested = 'assignment-requested';
+    case Assigned = 'ticket-assigned';
+    case Reassigned = 'ticket-reassigned';
     case Returned = 'ticket-returned';
     case Message = 'message';
     case StatusUpdate = 'status-update';
@@ -20,6 +22,8 @@ enum NotificationType: string
         return match ($this) {
             self::ApprovalRequested => 'Approval',
             self::AssignmentRequested => 'Assignment',
+            self::Assigned => 'Assigned',
+            self::Reassigned => 'Reassigned',
             self::Returned => 'Returned',
             self::Message => 'Message',
             self::StatusUpdate => 'Status update',

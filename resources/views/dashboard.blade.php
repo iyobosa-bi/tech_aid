@@ -2,6 +2,23 @@
 
 @section('content')
 
+{{-- Admin only: how approved tickets are being assigned right now (Flow 5). --}}
+@if (! is_null($autoAssign))
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-5 py-3.5 shadow-sm">
+        <p class="flex items-center gap-2.5 text-sm text-gray-800">
+            <span class="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
+                <i data-lucide="shuffle" class="w-4 h-4"></i>
+            </span>
+            Auto-assign is
+            <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $autoAssign ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' }}">{{ $autoAssign ? 'On' : 'Off' }}</span>
+            <span class="hidden sm:inline text-gray-500">{{ $autoAssign ? 'Approved tickets go straight to the least busy support person.' : 'Head of Service Management assigns by hand.' }}</span>
+        </p>
+        <a href="{{ route('admin.settings') }}" class="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-dark">
+            Manage <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </a>
+    </div>
+@endif
+
 <!-- Role-specific stat cards (built by App\Services\DashboardService) -->
 @php
     // The three icon-badge tints from design/style-notes.md (KPI cards).

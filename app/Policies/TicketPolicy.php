@@ -73,19 +73,31 @@ class TicketPolicy
             : Response::deny('Only returned tickets can be edited and resubmitted.');
     }
 
-    public function assign(User $user, Ticket $ticket): bool
+    // Flow 5: Head of Service Management gives a waiting ticket to an Application Support person.
+    public function assign(User $user, Ticket $ticket): Response
     {
-        return $user->checkPermissionTo(PermissionName::AssignTickets)
-            && $this->statusIs($ticket, TicketStatus::PendingAssignment, TicketStatus::Reopened);
-    }
-    
-    public function reassign(User $user, Ticket $ticket): bool
-    {
-        return $user->checkPermissionTo(PermissionName::ReassignTickets)
-            && $this->statusIs($ticket, TicketStatus::Assigned, TicketStatus::InProgress);
+        if (! $user->checkPermissionTo(PermissionName::AssignTickets)) {
+            return Response::deny('Only Head of Service Management can assign tickets.');
+        }
+
+        return $this->statusIs($ticket, TicketStatus::PendingAssignment, TicketStatus::Reopened)
+            ? Response::allow()
+            : Response::deny('This ticket is no longer waiting to be assigned.');
     }
 
-    public function resolve(User $user, Ticket $ticket): bool
+    // Flow 6: only Head of Service Management can move a ticket to a different support person.
+    public function reassign(User $user, Ticket $ticket): Response
+    {
+        if (! $user->checkPermissionTo(PermissionName::ReassignTickets)) {
+            return Response::deny('Only Head of Service Management can reassign tickets.');
+        }
+
+        return $this->statusIs($ticket, TicketStatus::Assigned, TicketStatus::InProgress)
+            ? Response::allow()
+            : Response::deny('Only tickets that are with Application Support can be reassigned.');
+    }
+
+    public function resolve(User $user, Ticket $ticket): Response
     {
         $assignedSupport = $user->checkPermissionTo(PermissionName::ResolveTickets)
             && $ticket->assigned_to_id === $user->id
@@ -95,7 +107,9 @@ class TicketPolicy
         $directResolve = $user->checkPermissionTo(PermissionName::AssignTickets)
             && $this->statusIs($ticket, TicketStatus::PendingAssignment);
 
-        return $assignedSupport || $directResolve;
+        return $assignedSupport || $directResolve
+            ? Response::allow()
+            : Response::deny('You can\'t resolve this ticket at its current stage.');
     }
 
     public function rate(User $user, Ticket $ticket): bool

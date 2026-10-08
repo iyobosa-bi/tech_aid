@@ -26,8 +26,15 @@ class TicketDecisionService
     public function __construct(
         private readonly TicketTransitionService $transitions,
         private readonly UserRepository $users,
+        private readonly SettingService $settings,
+        private readonly SupportAssignmentService $assignments,
     ) {}
-    // The comment is saved on the approval's history entry, so it shows in the conversation.
+
+    /**
+     * The comment is saved on the approval's history entry, so it shows in the conversation.
+     * With auto-assign ON (Flow 5) the ticket then goes straight to the least busy support
+     * person; otherwise — or if everyone is on leave — it waits for Head of Service Management.
+     */
     public function approve(Ticket $ticket, User $manager, ?string $comment = null): Ticket
     {
         $ticket = $this->transitions->move(
@@ -38,7 +45,18 @@ class TicketDecisionService
         );
 
         TicketApproved::dispatch($ticket, $manager);
-        Notification::send($this->users->withRole(RoleName::HeadOfServiceManagement), new TicketAwaitingAssignment($ticket));
+
+        $autoAssign = $this->settings->autoAssignEnabled();
+
+        // autoAssign() notifies the support person, the requester ("APPROVED and ASSIGNED") and HoSM.
+        if ($autoAssign && $assigned = $this->assignments->autoAssign($ticket)) {
+            return $assigned;
+        }
+
+        Notification::send(
+            $this->users->withRole(RoleName::HeadOfServiceManagement),
+            new TicketAwaitingAssignment($ticket, nobodyAvailable: $autoAssign),
+        );
         $ticket->requester->notify(new TicketStatusUpdated($ticket, TicketStatus::PendingAssignment));
 
         return $ticket;

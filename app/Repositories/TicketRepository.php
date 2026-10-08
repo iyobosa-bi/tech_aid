@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Str;
 
 class TicketRepository
@@ -75,6 +76,25 @@ class TicketRepository
             'attachments' => fn ($query) => $query->orderBy('id'),
             'statusHistory' => fn ($query) => $query->with('actor')->orderBy('created_at')->orderBy('id'),
         ]);
+    }
+
+    /**
+     * id => name for the people named in assign / reassign entries' meta (from/to assignee),
+     * deactivated staff included so old entries still read correctly.
+     *
+     * @param  Collection<int, TicketStatusHistory>  $history
+     * @return SupportCollection<int, string>
+     */
+    public function namesInHistory(Collection $history): SupportCollection
+    {
+        $ids = $history->flatMap(fn (TicketStatusHistory $entry) => [
+            $entry->meta['from_assignee_id'] ?? null,
+            $entry->meta['to_assignee_id'] ?? null,
+        ])->filter()->unique();
+
+        return $ids->isEmpty()
+            ? collect()
+            : User::withTrashed()->whereIn('id', $ids)->pluck('name', 'id');
     }
 
     /**

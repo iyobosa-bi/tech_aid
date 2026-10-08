@@ -3,9 +3,12 @@
 namespace App\Listeners;
 
 use App\Events\TicketApproved;
+use App\Events\TicketAssigned;
 use App\Events\TicketCommentPosted;
 use App\Events\TicketCreated;
 use App\Events\TicketDeclined;
+use App\Events\TicketReassigned;
+use App\Events\TicketResolved;
 use App\Events\TicketResubmitted;
 use App\Models\Ticket;
 use App\Models\User;
@@ -49,16 +52,41 @@ class LogTicketActivity
         ]);
     }
 
+    public function handleTicketAssigned(TicketAssigned $event): void
+    {
+        Log::channel('activity')->info($event->automatic() ? 'Ticket auto-assigned' : 'Ticket assigned', [
+            ...$this->context($event->ticket, $event->actor),
+            'assignee_id' => $event->assignee->id,
+            'assignee_name' => $event->assignee->username(),
+        ]);
+    }
+
+    public function handleTicketReassigned(TicketReassigned $event): void
+    {
+        Log::channel('activity')->info('Ticket reassigned', [
+            ...$this->context($event->ticket, $event->actor),
+            'from_assignee_id' => $event->from?->id,
+            'to_assignee_id' => $event->to->id,
+        ]);
+    }
+
+    public function handleTicketResolved(TicketResolved $event): void
+    {
+        Log::channel('activity')->info('Ticket resolved', $this->context($event->ticket, $event->actor));
+    }
+
     /**
-     * @return array{ticket_id: int, ticket_number: string, actor_id: int, actor_name: string}
+     * $actor is null when the system acted on its own (auto-assign).
+     *
+     * @return array{ticket_id: int, ticket_number: string, actor_id: ?int, actor_name: string}
      */
-    private function context(Ticket $ticket, User $actor): array
+    private function context(Ticket $ticket, ?User $actor): array
     {
         return [
             'ticket_id' => $ticket->id,
             'ticket_number' => $ticket->ticket_number,
-            'actor_id' => $actor->id,
-            'actor_name' => $actor->username(),
+            'actor_id' => $actor?->id,
+            'actor_name' => $actor?->username() ?? 'system',
         ];
     }
 }

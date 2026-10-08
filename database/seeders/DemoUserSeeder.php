@@ -15,6 +15,20 @@ class DemoUserSeeder extends Seeder
 {
     public const PASSWORD = 'Test1234@@@';
 
+    // The Admin account has its own password (it runs System settings).
+    public const ADMIN_PASSWORD = 'Admin1234@@@';
+
+    // Every demo account this seeder creates.
+    public const EMAILS = [
+        'linemanager@example.com',
+        'test@example.com',
+        'testtwo@example.com',
+        'hosm@example.com',
+        'support@example.com',
+        'support2@example.com',
+        'admin@example.com',
+    ];
+
     public function run(): void
     {
         $lineManager = $this->user('linemanager@example.com', 'Lara Manager', RoleName::LineManager, 'Operations');
@@ -25,22 +39,24 @@ class DemoUserSeeder extends Seeder
 
         $requester = $this->user('testtwo@example.com', 'Test two User', RoleName::Requester, 'Operations');
        // $requester->update(['line_manager_id' => $lineManager->id]);
-        
+
 
         $this->user('hosm@example.com', 'Hassan Service-Lead', RoleName::HeadOfServiceManagement, 'Technology');
+        // Two support staff, so auto-assign (least busy) and reassigning can be tried out.
         $this->user('support@example.com', 'Sade Support', RoleName::ApplicationSupport, 'Technology');
-        $this->user('admin@example.com', 'Ade Admin', RoleName::Admin, 'Technology');
+        $this->user('support2@example.com', 'Bola Support', RoleName::ApplicationSupport, 'Technology');
+        $this->user('admin@example.com', 'Ade Admin', RoleName::Admin, 'Technology', self::ADMIN_PASSWORD);
     }
-    
-    
-    private function user(string $email, string $name, RoleName $role, string $department): User
+
+
+    private function user(string $email, string $name, RoleName $role, string $department, string $password = self::PASSWORD): User
     {
 
         $user = User::withTrashed()->firstOrCreate(
             ['email' => $email],
             [
                 'name' => $name,
-                'password' => self::PASSWORD,
+                'password' => $password,
                 'department' => $department,
             ],
         );

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TicketAction;
+use App\Services\TicketTransitionService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -37,6 +38,12 @@ class TicketStatusHistory extends Model
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id')->withTrashed();
+    }
+
+    // Done by the system on its own (auto-assign): no person, actor_role 'System'.
+    public function isSystem(): bool
+    {
+        return $this->actor_id === null && $this->actor_role === TicketTransitionService::SYSTEM_ROLE;
     }
 
     // A plain conversation message, as opposed to a status change.

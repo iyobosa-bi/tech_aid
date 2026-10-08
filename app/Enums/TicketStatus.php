@@ -33,6 +33,16 @@ enum TicketStatus: string
         return [self::Assigned, self::InProgress];
     }
 
+    /**
+     * A support person's open workload — what "least busy" counts (Flow 5 auto-assign).
+     *
+     * @return list<self>
+     */
+    public static function supportWorkload(): array
+    {
+        return [self::Assigned, self::InProgress, self::Reopened];
+    }
+
     public function label(): string
     {
         return match ($this) {

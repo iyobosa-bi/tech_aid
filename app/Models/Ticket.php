@@ -21,6 +21,7 @@ class Ticket extends Model
         'line_manager_id',
         'assigned_to_id',
         'assigned_by_id',
+        'assigned_at',
         'title',
         'description',
         'category',
@@ -34,6 +35,7 @@ class Ticket extends Model
     protected function casts(): array
     {
         return [
+            'assigned_at' => 'datetime',
             'resolved_at' => 'datetime',
             'closed_at' => 'datetime',
         ];

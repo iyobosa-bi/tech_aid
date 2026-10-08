@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TicketStatus;
 use App\Http\Requests\ApproveTicketRequest;
 use App\Http\Requests\DeclineTicketRequest;
 use App\Models\Ticket;
@@ -18,9 +19,14 @@ class TicketDecisionController extends Controller
     {
         $ticket = $decisions->approve($ticket, $request->user(), $request->validated('comment'));
 
+        // With auto-assign ON the ticket may already be with a support person.
+        $next = $ticket->status === TicketStatus::Assigned->value
+            ? "It was auto-assigned to {$ticket->assignedTo->name}."
+            : "It's now with Head of Service Management for assignment.";
+
         return redirect()
             ->route('tickets.show', $ticket)
-            ->with('success', "Ticket {$ticket->ticket_number} approved. It's now with Head of Service Management for assignment.");
+            ->with('success', "Ticket {$ticket->ticket_number} approved. {$next}");
     }
 
     // DeclineTicketRequest authorises (TicketPolicy::decline) and requires the comment.

@@ -13,6 +13,7 @@ use App\Http\Requests\UpdateTicketRequest;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Repositories\TicketRepository;
+use App\Services\SupportAssignmentService;
 use App\Services\TicketCreationService;
 use App\Services\TicketResubmissionService;
 use App\Services\TicketUploadService;
@@ -45,12 +46,21 @@ class TicketController extends Controller
         ]);
     }
 
-    public function show(Ticket $ticket, TicketRepository $tickets): View
+    public function show(Request $request, Ticket $ticket, TicketRepository $tickets, SupportAssignmentService $assignments): View
     {
         $this->authorize('view', $ticket);
 
         $ticket = $tickets->loadForDetail($ticket);
         $history = $ticket->statusHistory;
+        $user = $request->user();
+
+        // Head of Service Management's assign / reassign picker (Flows 5–6): everyone in
+        // Application Support with their workload; on-leave staff are shown but can't be picked.
+        $supportStaff = $user->can('assign', $ticket) || $user->can('reassign', $ticket) ? $assignments->staff() : null;
+        // Suggest the least busy available person — never the one who already has it (reassign).
+        $candidates = $supportStaff
+            ? $assignments->bucket($supportStaff)->reject(fn (User $person) => $person->id === $ticket->assigned_to_id)
+            : null;
 
         return view('tickets.show', [
             'ticket' => $ticket,
@@ -58,9 +68,13 @@ class TicketController extends Controller
             'conversation' => $history->filter->hasMessage()->values(),
             // Status changes only; plain messages live in the conversation.
             'timeline' => $history->reject->isComment()->values(),
+            // Names behind the from/to assignee ids on assign/reassign entries.
+            'people' => $tickets->namesInHistory($history),
             'returnedBy' => $ticket->status === TicketStatus::Returned->value
                 ? $history->last(fn ($entry) => $entry->action === TicketAction::Rejected->value)
                 : null,
+            'supportStaff' => $supportStaff,
+            'suggestedAssignee' => $candidates ? $assignments->leastBusy($candidates) : null,
         ]);
     }
 

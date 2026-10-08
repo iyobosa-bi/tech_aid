@@ -1,13 +1,16 @@
 <?php
 
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TicketAssignmentController;
 use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\TicketCommentController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TicketDecisionController;
+use App\Http\Controllers\TicketResolutionController;
 use App\Http\Controllers\TicketUploadController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +40,14 @@ Route::middleware(['auth', 'cache.headers:no_store'])->group(function () {
     Route::get('/notifications/{notification}/open', [NotificationController::class, 'open'])
         ->whereUuid('notification')->name('notifications.open');
 
+    // Admin → System settings (SettingPolicy: "manage settings" only).
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+        Route::put('/settings/auto-assign', [SettingsController::class, 'updateAutoAssign'])->name('settings.auto-assign');
+        Route::put('/support-staff/{supportUser}/availability', [SettingsController::class, 'updateAvailability'])
+            ->whereNumber('supportUser')->name('support.availability');
+    });
+
     Route::post('/tickets/uploads', [TicketUploadController::class, 'store'])
         ->middleware('throttle:30,1')->name('tickets.uploads.store');
     Route::delete('/tickets/uploads', [TicketUploadController::class, 'destroy'])
@@ -50,6 +61,11 @@ Route::middleware(['auth', 'cache.headers:no_store'])->group(function () {
 
         Route::post('/tickets/{ticket}/approve', [TicketDecisionController::class, 'approve'])->name('tickets.approve');
         Route::post('/tickets/{ticket}/decline', [TicketDecisionController::class, 'decline'])->name('tickets.decline');
+
+        // Flows 5–6: Head of Service Management (resolve is shared with Flow 7, the assigned support person).
+        Route::post('/tickets/{ticket}/assign', [TicketAssignmentController::class, 'assign'])->name('tickets.assign');
+        Route::post('/tickets/{ticket}/reassign', [TicketAssignmentController::class, 'reassign'])->name('tickets.reassign');
+        Route::post('/tickets/{ticket}/resolve', [TicketResolutionController::class, 'store'])->name('tickets.resolve');
 
         Route::post('/tickets/{ticket}/comments', [TicketCommentController::class, 'store'])
             ->middleware('throttle:20,1')->name('tickets.comments.store');

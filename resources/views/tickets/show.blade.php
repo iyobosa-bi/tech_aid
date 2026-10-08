@@ -15,6 +15,8 @@
         TicketStatus::PendingLineManagerApproval->value => 'Waiting for '.($ticket->lineManager?->name ?? 'the line manager').' to approve.',
         TicketStatus::Returned->value => "Waiting for {$requesterName} to edit and resubmit.",
         TicketStatus::PendingAssignment->value => 'Waiting for Head of Service Management to assign it.',
+        TicketStatus::Assigned->value, TicketStatus::InProgress->value => 'With '.($ticket->assignedTo?->name ?? 'Application Support').' to work on.',
+        TicketStatus::Resolved->value => "Waiting for {$requesterName} to confirm the fix.",
         default => null,
     };
 @endphp
@@ -44,6 +46,9 @@
             @can('approve', $ticket)
                 @include('tickets.partials.detail-decision')
             @endcan
+            @if ($supportStaff)
+                @include('tickets.partials.detail-assignment')
+            @endif
             @can('resubmit', $ticket)
                 <a href="{{ route('tickets.edit', $ticket) }}"
                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand hover:bg-brand-dark text-white font-display font-semibold text-sm px-4 py-2.5 transition-colors">

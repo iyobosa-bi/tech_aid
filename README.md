@@ -20,6 +20,8 @@ resolution chain:
 | **Ticket page** | Opens from the ticket's title. Shows details, attachments (images and PDFs open in a quick-view popup; every file can be downloaded; Word files are download-only), a status-history timeline, and a conversation thread that everyone on the ticket can see and reply to. New messages notify the other participants. |
 | **Approve / decline** (Flow 3) | Only the ticket's own Line Manager, only while it's pending. Both go through a confirmation popup, and both comments are posted to the ticket's conversation. An approval comment is optional; left blank, it's posted as *"Approved by me. No comments"*. A decline needs a comment and returns the ticket to the requester as *Returned* (not closed). Head of Service Management is notified on approval, and the requester on a decline. |
 | **Edit & resubmit** (Flow 4) | The requester edits a returned ticket, optionally adds files (up to 5 in total) and a note, and sends it back to their Line Manager. |
+| **Assign, reassign, resolve** (Flows 5–6) | Head of Service Management assigns an approved ticket from its page. The picker shows each support person's open tickets, pre-selects the least busy, and greys out anyone on leave. They can later reassign it, or resolve it directly with resolution notes. Every step is in the history, and the people affected are notified. |
+| **Auto-assign + System settings** | Admin → **System settings** has an Auto-assign switch. When it's on, an approved ticket goes straight to the least busy available support person (fewest open tickets; ties go to whoever was given a ticket longest ago); the history shows it as *Tech Aid · Automatic*. The page also lists the support "bucket" with an **On leave** switch per person. Bulk staff import from Excel is coming. |
 | **Notifications** (Flow 10) | A bell in the top bar (desktop and phone) with an unread count. It checks for new notifications every 15 seconds and lists the latest ten, grouped by day, each with a type tag such as *Approval*, *Returned* or *Message*. *View all* opens a full page with *Mark all as Read*, filters (read/unread, type, date range), page size and page navigation. Requesters are told about every stage of their ticket by email and in-app, and a decline includes the line manager's reason. Opening a notification marks it read and takes you to the ticket. |
 | **Activity log** | `storage/logs/activity-YYYY-MM-DD.log`, kept for 90 days: sign-ins, OTP checks, and every ticket action, recorded as who and what. Never passwords, codes or message text. |
 | **404 page** | Branded "Page not found" page. It offers *Back to dashboard* if you're signed in, or *Go to sign in* if you're not. |
@@ -98,8 +100,9 @@ php artisan queue:work
 
 ### Demo accounts
 
-All demo accounts use the password **`Test1234@@@`** (local development only).
-The seeders are safe to re-run: they never duplicate accounts or reset passwords.
+All demo accounts use the password **`Test1234@@@`**, except Admin, which uses
+**`Admin1234@@@`** (local development only). The seeders are safe to re-run:
+they never duplicate accounts or reset passwords.
 
 | Email | Role | Notes |
 |---|---|---|
@@ -107,8 +110,9 @@ The seeders are safe to re-run: they never duplicate accounts or reset passwords
 | `testtwo@example.com` | Requester | No line manager, so can't raise tickets (useful for testing that rule) |
 | `linemanager@example.com` | Line Manager | |
 | `hosm@example.com` | Head of Service Management | Sees every ticket |
-| `support@example.com` | Application Support | |
-| `admin@example.com` | Admin | |
+| `support@example.com` | Application Support | Sade Support |
+| `support2@example.com` | Application Support | Bola Support. Two support staff, so auto-assign and reassign can be tried |
+| `admin@example.com` | Admin | Password `Admin1234@@@`. Runs System settings (auto-assign, on leave) |
 
 ### Getting the OTP code locally
 

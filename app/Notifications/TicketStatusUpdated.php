@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Enums\NotificationType;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -13,10 +14,14 @@ use Illuminate\Support\Str;
 
 /**
  * Tells the requester their ticket moved to a new stage (Flow 10): raised, approved,
- * resubmitted — later assigned, resolved, reopened. A decline sends TicketReturned instead.
+ * resubmitted, assigned, resolved — later reopened. A decline sends TicketReturned instead.
  *
- * $status is passed in rather than read from the ticket: this is queued, and by the time
- * the job runs the ticket may already have moved on again.
+ * $status (and $assignee) are passed in rather than read from the ticket: this is queued, and
+ * by the time the job runs the ticket may already have moved on again.
+ *
+ * $approvedNow: auto-assign gave the ticket to support in the same moment it was approved, so
+ * the requester gets one "APPROVED and ASSIGNED" update instead of two back to back.
+ * $notes: the resolution notes, included in the email when the ticket is resolved.
  */
 class TicketStatusUpdated extends Notification implements ShouldQueue
 {
@@ -25,6 +30,9 @@ class TicketStatusUpdated extends Notification implements ShouldQueue
     public function __construct(
         public readonly Ticket $ticket,
         public readonly TicketStatus $status,
+        public readonly ?User $assignee = null,
+        public readonly bool $approvedNow = false,
+        public readonly ?string $notes = null,
     ) {}
 
     /**
@@ -42,12 +50,17 @@ class TicketStatusUpdated extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject("Ticket {$this->ticket->ticket_number} is now {$this->status->label()}")
             ->greeting('Hello '.$notifiable->name.',')
             ->line(Str::ucfirst($this->sentence()).'.')
-            ->line("**{$this->ticket->title}**")
-            ->action('View ticket', route('tickets.show', $this->ticket));
+            ->line("**{$this->ticket->title}**");
+
+        if ($this->notes) {
+            $mail->line('Resolution notes:')->line('“'.$this->notes.'”');
+        }
+
+        return $mail->action('View ticket', route('tickets.show', $this->ticket));
     }
 
     /**
@@ -67,9 +80,10 @@ class TicketStatusUpdated extends Notification implements ShouldQueue
     // "your ticket TA-000189 is APPROVED and PENDING ASSIGNMENT" — the stage in capitals, as in the design.
     private function sentence(): string
     {
-        $stage = match ($this->status) {
-            TicketStatus::PendingLineManagerApproval => "PENDING LINE MANAGER ({$this->ticket->lineManager->name})",
-            TicketStatus::PendingAssignment => 'APPROVED and PENDING ASSIGNMENT',
+        $stage = match (true) {
+            $this->status === TicketStatus::PendingLineManagerApproval => "PENDING LINE MANAGER ({$this->ticket->lineManager->name})",
+            $this->status === TicketStatus::PendingAssignment => 'APPROVED and PENDING ASSIGNMENT',
+            $this->status === TicketStatus::Assigned && $this->assignee !== null => ($this->approvedNow ? 'APPROVED and ' : '')."ASSIGNED to {$this->assignee->name}",
             default => Str::upper($this->status->label()),
         };
 

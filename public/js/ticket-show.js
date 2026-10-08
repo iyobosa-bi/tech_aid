@@ -70,6 +70,81 @@ function ticketDecision(config) {
     };
 }
 
+// Head of Service Management's actions (Flows 5–6). "pick" = Assign / Reassign: choosing a
+// person and pressing "Assign to {name}" is the confirmation. "resolve" = Resolve directly:
+// required notes first, then a confirmation that quotes them before anything is sent.
+function ticketAssignment(config) {
+    return {
+        modal: null, // 'pick' | 'resolve' | null
+        step: 'notes', // resolve: 'notes' → 'confirm'
+        selected: config.selected ?? null,
+        verb: config.verb,
+        note: config.note ?? '',
+        pickError: config.pickError ?? '',
+        notes: config.notes ?? '',
+        notesTouched: false,
+        notesServerError: config.notesError ?? '',
+        submitting: false,
+
+        init() {
+            // The server rejected the input (e.g. the person went on leave meanwhile): reopen with its message.
+            if (config.reopen === 'pick') this.openPick();
+            if (config.reopen === 'resolve') this.openResolve();
+        },
+
+        get selectedName() {
+            return this.selected ? (config.names[this.selected] ?? '') : '';
+        },
+
+        get notesError() {
+            const length = this.notes.trim().length;
+
+            if (!length) return 'Please describe how the issue was resolved.';
+            if (length < config.notesMin) return `Please give a little more detail (at least ${config.notesMin} characters).`;
+            if (this.notes.length > config.notesMax) return `Please keep it under ${config.notesMax} characters.`;
+
+            return '';
+        },
+
+        get shownNotesError() {
+            return this.notesServerError || (this.notesTouched ? this.notesError : '');
+        },
+
+        openPick() {
+            this.modal = 'pick';
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        openResolve() {
+            this.modal = 'resolve';
+            this.step = 'notes';
+            this.$nextTick(() => this.$refs.resolutionNotes?.focus());
+        },
+
+        toConfirm() {
+            this.notesTouched = true;
+
+            if (this.notesError) {
+                this.$refs.resolutionNotes.focus();
+                return;
+            }
+
+            this.step = 'confirm';
+            this.$nextTick(() => this.$refs.resolveConfirm.focus());
+        },
+
+        close() {
+            if (!this.submitting) this.modal = null;
+        },
+
+        // form.submit() skips the @submit handler, so this is the only path that actually sends.
+        submit(formRef) {
+            this.submitting = true;
+            this.$refs[formRef].submit();
+        },
+    };
+}
+
 // Quick view for images and PDFs. The <img>/<iframe> is created only while open, so a
 // closed preview isn't still loading the file in the background.
 function attachmentPreview() {

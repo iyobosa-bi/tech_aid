@@ -16,8 +16,22 @@
                 <div class="min-w-0 pt-0.5">
                     <p class="text-sm font-semibold text-gray-900">{{ $action?->label() ?? Str::headline($entry->action) }}</p>
                     <p class="text-xs text-gray-600">
-                        {{ $entry->actor?->name ?? 'Former staff member' }}@if ($entry->actor_role) · {{ $entry->actor_role }}@endif
+                        @if ($entry->isSystem())
+                            Tech Aid · Automatic
+                        @else
+                            {{ $entry->actor?->name ?? 'Former staff member' }}@if ($entry->actor_role) · {{ $entry->actor_role }}@endif
+                        @endif
                     </p>
+                    {{-- Assign / reassign: who it went to (and from). --}}
+                    @if ($to = $people[$entry->meta['to_assignee_id'] ?? 0] ?? null)
+                        <p class="text-xs text-gray-800 mt-0.5">
+                            @if ($from = $people[$entry->meta['from_assignee_id'] ?? 0] ?? null)
+                                From {{ $from }} to <span class="font-semibold">{{ $to }}</span>
+                            @else
+                                To <span class="font-semibold">{{ $to }}</span>
+                            @endif
+                        </p>
+                    @endif
                     <time class="block text-[11px] text-gray-500 mt-0.5" datetime="{{ $entry->created_at->toIso8601String() }}">{{ $entry->created_at->format('M j, Y · H:i') }}</time>
                     @if ($entry->to_status && $entry->to_status !== $entry->from_status)
                         <div class="mt-1.5">@include('partials.status-badge', ['status' => $entry->to_status])</div>
