@@ -66,7 +66,6 @@
             </button>
         </div>
     </div>
-
     <!-- Sidebar -->
     <aside
         :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
@@ -103,14 +102,31 @@
                 <i data-lucide="plus-circle" class="w-4 h-4"></i> New Ticket
             </a>
 
-            @can('manage', App\Models\Setting::class)
+            @php $isAdmin = auth()->user()?->can('viewAny', App\Models\User::class) || auth()->user()?->can('manage', App\Models\Setting::class); @endphp
+            @if ($isAdmin)
                 <p class="font-display text-[10px] uppercase tracking-wider text-white/40 px-3 mb-2 mt-6">Admin</p>
-                <a href="{{ route('admin.settings') }}"
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
-                          {{ request()->routeIs('admin.*') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
-                    <i data-lucide="sliders-horizontal" class="w-4 h-4"></i> System settings
-                </a>
-            @endcan
+                @can('viewAny', App\Models\User::class)
+                    <a href="{{ route('admin.users') }}"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
+                              {{ request()->routeIs('admin.users*') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
+                        <i data-lucide="users" class="w-4 h-4"></i> Users
+                    </a>
+                @endcan
+                @can('viewAll', App\Models\Ticket::class)
+                    <a href="{{ route('admin.tickets') }}"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
+                              {{ request()->routeIs('admin.tickets') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
+                        <i data-lucide="list-checks" class="w-4 h-4"></i> All tickets
+                    </a>
+                @endcan
+                @can('manage', App\Models\Setting::class)
+                    <a href="{{ route('admin.settings') }}"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
+                              {{ request()->routeIs('admin.settings*', 'admin.support.*') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
+                        <i data-lucide="sliders-horizontal" class="w-4 h-4"></i> System settings
+                    </a>
+                @endcan
+            @endif
 
             <p class="font-display text-[10px] uppercase tracking-wider text-white/40 px-3 mb-2 mt-6">Account</p>
             <a href="{{ route('notifications.index') }}"

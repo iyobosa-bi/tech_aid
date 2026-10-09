@@ -7,73 +7,35 @@
 
 @section('content')
 
-<div x-data="loginPage()"
-     data-verify-url="{{ route('login.otp.verify') }}"
-     data-resend-url="{{ route('login.otp.resend') }}"
-     data-cancel-url="{{ route('login.otp.cancel') }}"
-     data-email-domain="{{ config('app.staff_email_domain') }}"
-     data-old-email="{{ old('email') }}"
-     class="h-full flex"
+<x-auth-shell
+    x-data="loginPage()"
+    data-verify-url="{{ route('login.otp.verify') }}"
+    data-resend-url="{{ route('login.otp.resend') }}"
+    data-cancel-url="{{ route('login.otp.cancel') }}"
+    data-email-domain="{{ config('app.staff_email_domain') }}"
+    data-old-email="{{ old('email') }}"
+    inert-when="otpOpen"
 >
-    {{-- Both panels go inert while the OTP modal is open: nothing behind it can be focused, clicked or typed into.
-         No animations or transitions anywhere on this screen for now (design/style-notes.md, "Wordmark"). --}}
-    <div
-        x-effect="$el.inert = otpOpen"
-        class="hidden md:flex md:w-[33%] bg-brand flex-col items-center justify-center relative px-8"
-    >
-        <div class="w-432 h-4366 rounded-2xl bg-white flex items-center justify-center mb-6 shadow-xl">
-            <svg viewBox="0 0 50 50" class="w-40 h-40">
-                <defs>
-                    <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stop-color="#2dd4bf"/>
-                        <stop offset="100%" stop-color="#152a9e"/>
-                    </linearGradient>
-                </defs>
-                <circle cx="24" cy="24" r="22" fill="none" stroke="url(#logoGrad)" stroke-width="3"/>
-                <path d="M14 28 C18 18, 26 14, 34 16 C28 18, 24 24, 26 32 C20 32, 15 32, 14 28 Z" fill="url(#logoGrad)"/>
-            </svg>
-        </div>
-
-        <h1 class="font-display font-extrabold text-white text-3xl tracking-tight">Tech Aid</h1>
-
-        <p class="font-display text-white/70 text-sm text-center mt-3 max-w-[220px] leading-relaxed">
-            Internal technology support &amp; ticketing for optimusbank.com
-        </p>
-    </div>
-
-    <!-- RIGHT: full-bleed photo + floating card. bg-brand matches the left panel, so there's no seam while the photo loads. -->
-    <div class="flex-1 relative overflow-hidden bg-brand" x-effect="$el.inert = otpOpen">
-        <img src="{{ asset('images/login-bg.jpg') }}" alt="" fetchpriority="high" width="890" height="1024"
-             class="absolute inset-0 w-full h-full object-cover" />
-
-        <!-- soft brand tint: blends the photo's left edge into the blue panel -->
-        <div class="absolute inset-0 bg-[linear-gradient(90deg,rgb(21_42_158/0.3)_41%,rgb(21_42_158/0.03)_100%)]"></div>
-
-        <!-- dark overlay, mobile only — improves contrast since blue panel is hidden -->
-        <div class="absolute inset-0 bg-brand-dark/50 md:hidden"></div>
-
-        <!-- mobile-only compact header -->
-        <div class="md:hidden absolute top-6 left-0 right-0 flex flex-col items-center px-4">
-            <div class="w-14 h-14 rounded-xl bg-white flex items-center justify-center mb-2 shadow-lg">
-                <svg viewBox="0 0 48 48" class="w-8 h-8">
-                    <defs>
-                        <linearGradient id="logoGradM" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stop-color="#2dd4bf"/>
-                            <stop offset="100%" stop-color="#152a9e"/>
-                        </linearGradient>
-                    </defs>
-                    <circle cx="24" cy="24" r="22" fill="none" stroke="url(#logoGradM)" stroke-width="3"/>
-                    <path d="M14 28 C18 18, 26 14, 34 16 C28 18, 24 24, 26 32 C20 32, 15 32, 14 28 Z" fill="url(#logoGradM)"/>
-                </svg>
-            </div>
-            <h1 class="font-display font-extrabold text-white text-xl tracking-tight">Tech Aid</h1>
-        </div>
-
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-[520px]">
-            <div class="bg-white rounded-2xl shadow-2xl p-7 sm:p-10">
+                {{-- Both panels go inert while the OTP modal is open (inert-when): nothing behind it can be focused,
+                     clicked or typed into. No animations or transitions on this screen for now (design/style-notes.md). --}}
                 <h2 class="font-display font-extrabold text-brand text-2xl sm:text-[1.75rem] leading-tight mb-7 sm:mb-8">
                     Sign in to Tech Aid
                 </h2>
+
+                {{-- After a password reset ("status"), or when a deactivated account was signed out ("error"). --}}
+                @if (session('status'))
+                    <div role="status" class="mb-6 flex items-start gap-2 px-3 py-2.5 border border-green-200 bg-green-50 rounded-lg">
+                        <i data-lucide="circle-check" class="w-4 h-4 mt-0.5 text-green-600 shrink-0"></i>
+                        <p class="text-sm font-medium leading-5 text-green-800">{{ session('status') }}</p>
+                    </div>
+                @endif
+                @if (session('error'))
+                    <div role="alert" class="mb-6 flex items-start gap-2 px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg">
+                        <i data-lucide="circle-alert" class="w-4 h-4 mt-0.5 text-red-600 shrink-0"></i>
+                        <p class="text-sm font-semibold leading-5 text-red-700">{{ session('error') }}</p>
+                    </div>
+                @endif
+
                 <div
                     x-show="loginError"
                     x-cloak
@@ -114,7 +76,10 @@
                     </div>
 
                     <div>
-                        <label for="password" class="block font-display font-semibold text-brand text-sm mb-2">Password</label>
+                        <div class="flex items-baseline justify-between gap-3 mb-2">
+                            <label for="password" class="font-display font-semibold text-brand text-sm">Password</label>
+                            <a href="{{ route('password.request') }}" class="text-sm font-medium text-brand hover:text-brand-dark hover:underline underline-offset-2">Forgot password?</a>
+                        </div>
                         <div class="relative">
                             <i data-lucide="lock" class="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2"
                                :class="passwordInvalid ? 'text-red-500' : 'text-gray-400'"></i>
@@ -154,10 +119,8 @@
                         </span>
                     </button>
                 </form>
-            </div>
-        </div>
-    </div>
 
+    <x-slot:after>
     <!-- OTP MODAL (design/screenshots/otpmodal.JPG) -->
     <div x-show="otpOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto"
          role="dialog" aria-modal="true" aria-labelledby="otp-title" aria-describedby="otp-intro">
@@ -227,7 +190,8 @@
             <p x-text="resendMessage" class="mt-8 min-h-[1.25rem] text-center text-sm text-gray-500" role="status" aria-live="polite"></p>
         </div>
     </div>
-</div>
+    </x-slot:after>
+</x-auth-shell>
 
 <script src="{{ asset('js/main.js') }}?v={{ filemtime(public_path('js/main.js')) }}"></script>
 @endsection

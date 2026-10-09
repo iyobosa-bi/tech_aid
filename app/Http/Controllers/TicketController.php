@@ -142,7 +142,7 @@ class TicketController extends Controller
     private function listHeading(User $user): string
     {
         return match (true) {
-            $user->checkPermissionTo(PermissionName::AssignTickets) => 'All Tickets',
+            $user->checkPermissionTo(PermissionName::AssignTickets), $user->checkPermissionTo(PermissionName::ManageUsers) => 'All Tickets',
             $user->checkPermissionTo(PermissionName::ApproveTickets) => 'Team Tickets',
             $user->checkPermissionTo(PermissionName::ResolveTickets) => 'Assigned Tickets',
             default => 'My Tickets',

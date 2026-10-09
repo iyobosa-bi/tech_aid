@@ -93,7 +93,10 @@
         </form>
     @else
         <p class="flex items-center gap-2 border-t border-gray-100 px-5 py-4 text-xs text-gray-500">
-            <i data-lucide="lock" class="w-3.5 h-3.5"></i> This ticket is closed, so the conversation is read-only.
+            <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+            {{ $ticket->status === \App\Enums\TicketStatus::Closed->value
+                ? 'This ticket is closed, so the conversation is read-only.'
+                : 'You\'re viewing this ticket as an Admin, so the conversation is read-only.' }}
         </p>
     @endcan
 </section>

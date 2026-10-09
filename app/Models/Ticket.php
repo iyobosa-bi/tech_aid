@@ -46,7 +46,8 @@ class Ticket extends Model
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if ($user->checkPermissionTo(PermissionName::AssignTickets)) {
+        // Head of Service Management, and Admins (read-only, Admin → All tickets), see every ticket.
+        if ($user->checkPermissionTo(PermissionName::AssignTickets) || $user->checkPermissionTo(PermissionName::ManageUsers)) {
             return $query;
         }
 

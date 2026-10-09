@@ -6,6 +6,7 @@ use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
@@ -28,6 +29,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $wantsJson = fn (Request $request) => $request->is('api/*') || $request->expectsJson();
 
         $exceptions->shouldRenderJsonWhen($wantsJson);
+
+        // Forgot-password pages are plain forms: show the limit on the page, not a bare 429 screen.
+        // The limit is keyed by the typed email, so this reads the same whether the account exists.
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) use ($wantsJson) {
+            if ($wantsJson($request) || ! $request->routeIs('password.*')) {
+                return null;
+            }
+
+            $minutes = max(1, (int) ceil(((int) ($e->getHeaders()['Retry-After'] ?? 60)) / 60));
+
+            return redirect()->back()->with('error', "Too many requests. Please wait {$minutes} ".($minutes === 1 ? 'minute' : 'minutes').' and try again.');
+        });
 
         // The handler converts AuthorizationException into AccessDeniedHttpException
         // (prepareException) BEFORE render callbacks run, so match that and check the

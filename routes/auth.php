@@ -4,18 +4,13 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
-use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
-use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['guest', 'cache.headers:no_store'])->group(function () {
-    Route::get('register', [RegisteredUserController::class, 'create'])
-        ->name('register');
-
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    // No self-registration: an Admin manages accounts (Admin → Users; bulk import later).
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
@@ -33,16 +28,31 @@ Route::middleware(['guest', 'cache.headers:no_store'])->group(function () {
     Route::post('login/otp/cancel', [AuthenticatedSessionController::class, 'cancelOtp'])
         ->name('login.otp.cancel');
 
-    Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
+    // Forgot password: email → 6-digit code → new password (PasswordResetController, PasswordService).
+    // Code requests: 3 per 10 minutes per email and 10 per IP ('password-reset-codes', AppServiceProvider).
+    Route::get('forgot-password', [PasswordResetController::class, 'create'])
         ->name('password.request');
 
-    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
+    Route::post('forgot-password', [PasswordResetController::class, 'sendCode'])
+        ->middleware('throttle:password-reset-codes')
         ->name('password.email');
 
-    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
+    Route::get('forgot-password/code', [PasswordResetController::class, 'showCode'])
+        ->name('password.code');
+
+    Route::post('forgot-password/code', [PasswordResetController::class, 'verifyCode'])
+        ->middleware('throttle:10,1')
+        ->name('password.code.verify');
+
+    Route::post('forgot-password/resend', [PasswordResetController::class, 'resendCode'])
+        ->middleware('throttle:password-reset-codes')
+        ->name('password.code.resend');
+
+    Route::get('reset-password', [PasswordResetController::class, 'edit'])
         ->name('password.reset');
 
-    Route::post('reset-password', [NewPasswordController::class, 'store'])
+    Route::post('reset-password', [PasswordResetController::class, 'update'])
+        ->middleware('throttle:6,1')
         ->name('password.store');
 });
 

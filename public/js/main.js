@@ -246,6 +246,15 @@ function loginPage() {
                 if (!response.ok) {
                     this.otpError = data.message || 'Invalid or expired code.';
                     this.code = ['', '', '', '', '', ''];
+
+                    // Too many wrong tries: the server cancelled the code, so offer Resend now.
+                    if (data.code_expired) {
+                        this.stopCountdown();
+                        this.secondsLeft = 0;
+                        this.waitingOutLimit = false;
+                        return;
+                    }
+
                     this.focusDigit(0);
                     return;
                 }

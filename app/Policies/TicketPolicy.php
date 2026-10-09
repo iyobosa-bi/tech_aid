@@ -25,10 +25,18 @@ class TicketPolicy
         return true;
     }
 
+    // Admins can open any ticket, read-only: no workflow action grants them anything, and comment() leaves them out.
     public function view(User $user, Ticket $ticket): bool
     {
-        return in_array($user->id, [$ticket->requester_id, $ticket->line_manager_id, $ticket->assigned_to_id], true)
-            || $user->checkPermissionTo(PermissionName::AssignTickets);
+        return $this->takesPart($user, $ticket) || $user->checkPermissionTo(PermissionName::ManageUsers);
+    }
+
+    // Admin → All tickets.
+    public function viewAll(User $user): Response
+    {
+        return $user->checkPermissionTo(PermissionName::ManageUsers)
+            ? Response::allow()
+            : Response::deny('Only an Admin can see this page.');
     }
 
     public function approve(User $user, Ticket $ticket): Response
@@ -49,10 +57,10 @@ class TicketPolicy
         return $this->approve($user, $ticket);
     }
 
-    // Everyone who can see the ticket can join its conversation until it's closed.
+    // Everyone working on the ticket can join its conversation until it's closed (not Admins, who only look).
     public function comment(User $user, Ticket $ticket): Response
     {
-        if (! $this->view($user, $ticket)) {
+        if (! $this->takesPart($user, $ticket)) {
             return Response::deny('You do not have access to this ticket.');
         }
 
@@ -147,6 +155,13 @@ class TicketPolicy
         return $user->checkPermissionTo(PermissionName::RespondToResolutions)
             && $ticket->requester_id === $user->id
             && $this->statusIs($ticket, TicketStatus::Resolved);
+    }
+
+    // Raised it, manages its requester, has it, or is Head of Service Management (who sees every ticket).
+    private function takesPart(User $user, Ticket $ticket): bool
+    {
+        return in_array($user->id, [$ticket->requester_id, $ticket->line_manager_id, $ticket->assigned_to_id], true)
+            || $user->checkPermissionTo(PermissionName::AssignTickets);
     }
 
     // Application Support, and this ticket is theirs (not a colleague's).

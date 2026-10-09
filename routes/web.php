@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\TicketController as AdminTicketController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
@@ -25,9 +27,9 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified', 'cache.headers:no_store'])->name('dashboard');
 
 Route::middleware(['auth', 'cache.headers:no_store'])->group(function () {
+    // Staff can only change their own password here (PUT /password, routes/auth.php). Name, email and
+    // the account itself are managed by an Admin (Admin → Users).
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
     Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
@@ -41,8 +43,16 @@ Route::middleware(['auth', 'cache.headers:no_store'])->group(function () {
     Route::get('/notifications/{notification}/open', [NotificationController::class, 'open'])
         ->whereUuid('notification')->name('notifications.open');
 
-    // Admin → System settings (SettingPolicy: "manage settings" only).
+    // Admin → Users, All tickets (UserPolicy / TicketPolicy: "manage users") and System settings
+    // (SettingPolicy: "manage settings"). Admin only.
     Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/users', [AdminUserController::class, 'index'])->name('users');
+        Route::put('/users/{user}/status', [AdminUserController::class, 'updateStatus'])
+            ->whereNumber('user')->name('users.status');
+        Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])
+            ->whereNumber('user')->name('users.destroy');
+        Route::get('/tickets', [AdminTicketController::class, 'index'])->name('tickets');
+
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
         Route::put('/settings/auto-assign', [SettingsController::class, 'updateAutoAssign'])->name('settings.auto-assign');
         Route::put('/support-staff/{supportUser}/availability', [SettingsController::class, 'updateAvailability'])

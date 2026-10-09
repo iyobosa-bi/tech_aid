@@ -2,6 +2,7 @@
 @include('tickets.partials.table-assets')
 @php
     $hasFilters = $filters['search'] !== '' || $filters['status'];
+    $listUrl ??= route('tickets.index'); // Admin → All tickets passes its own
 @endphp
 
 @if ($tickets->isEmpty())
@@ -18,7 +19,7 @@
                     No tickets have that status right now.
                 @endif
             </p>
-            <a href="{{ route('tickets.index') }}" @click.prevent="clearFilters()"
+            <a href="{{ $listUrl }}" @click.prevent="clearFilters()"
                class="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-brand hover:text-brand-dark">
                 <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Clear filters
             </a>

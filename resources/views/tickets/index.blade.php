@@ -1,4 +1,5 @@
-@extends('layouts.app', ['pageTitle' => 'Tickets', 'title' => 'Tickets — Tech Aid'])
+{{-- The Tickets page, and Admin → All tickets (Admin\TicketController: $listUrl, $pageTitle, $showActions). --}}
+@extends('layouts.app', ['pageTitle' => $pageTitle ?? 'Tickets', 'title' => ($pageTitle ?? 'Tickets').' — Tech Aid'])
 
 @push('head')
     <style>
@@ -9,10 +10,11 @@
 @endpush
 
 @section('content')
+@php $listUrl ??= route('tickets.index'); @endphp
 {{-- Layout follows design/screenshots/ticketTable.png: tinted panel, toolbar row, white table card inside. --}}
 <div
     x-data="ticketList(@js([
-        'url' => route('tickets.index'),
+        'url' => $listUrl,
         'search' => $filters['search'],
         'status' => $filters['status'] ?? '',
         'sort' => $filters['sort'],
@@ -24,7 +26,7 @@
         <div class="h-full w-1/4 bg-brand ticket-list-progress"></div>
     </div>
 
-    <form method="GET" action="{{ route('tickets.index') }}" @submit.prevent="refresh()" role="search"
+    <form method="GET" action="{{ $listUrl }}" @submit.prevent="refresh()" role="search"
           class="flex flex-col lg:flex-row lg:items-center gap-3 px-1 pt-1 pb-4">
         <h2 class="font-display font-semibold text-sm text-gray-900 whitespace-nowrap lg:mr-6">{{ $heading }}</h2>
 

@@ -1,7 +1,8 @@
 {{--
-    Shared ticket table: the Tickets page (sortable, inside live search) and the dashboard's
-    Recent Tickets (static). Expects $tickets and $showRequester; pass 'sortable' => true
-    together with $filters to get sort links in the headers.
+    Shared ticket table: the Tickets page (sortable, inside live search), the dashboard's
+    Recent Tickets (static) and Admin → All tickets. Expects $tickets and $showRequester; pass
+    'sortable' => true together with $filters to get sort links in the headers, and
+    'showActions' => true for a View button on each row.
 --}}
 @use('App\Enums\TicketCategory')
 @use('App\Enums\TicketPriority')
@@ -9,6 +10,7 @@
 @php
     $sortable ??= false;
     $filters ??= null; // only read when sortable
+    $showActions ??= false;
     $canOpen = Route::has('tickets.show');
 
     // Every column stays visible; narrow screens scroll the table sideways instead.
@@ -23,7 +25,8 @@
         'priority' => ['label' => 'Priority', 'class' => 'px-3'],
         'assignee' => ['label' => 'Assigned to', 'class' => 'px-3', 'sortable' => false],
         'status' => ['label' => 'Status', 'class' => 'px-3'],
-        'created_at' => ['label' => 'Date opened', 'class' => 'pl-3 pr-5'],
+        'created_at' => ['label' => 'Date opened', 'class' => $showActions ? 'px-3' : 'pl-3 pr-5'],
+        'actions' => $showActions ? ['label' => 'Actions', 'class' => 'pl-3 pr-5', 'sortable' => false] : null,
     ]);
 
     $sortUrl = function (string $column) use ($filters) {
@@ -96,9 +99,18 @@
                             @include('partials.status-badge', ['status' => $ticket->status, 'variant' => 'outline'])
                         </td>
 
-                        <td class="pl-3 pr-5 py-4 whitespace-nowrap tabular-nums">
+                        <td class="{{ $showActions ? 'px-3' : 'pl-3 pr-5' }} py-4 whitespace-nowrap tabular-nums">
                             <time datetime="{{ $ticket->created_at->toIso8601String() }}">{{ $ticket->created_at->format('Y-m-d H:i') }}</time>
                         </td>
+
+                        @if ($showActions)
+                            <td class="pl-3 pr-5 py-3 whitespace-nowrap">
+                                <a href="{{ route('tickets.show', $ticket) }}" aria-label="View {{ $ticket->ticket_number }}"
+                                   class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-brand hover:text-brand transition-colors">
+                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> View
+                                </a>
+                            </td>
+                        @endif
                     </tr>
                 @endforeach
             </tbody>
