@@ -7,11 +7,13 @@
 @endpush
 
 @section('content')
+{{-- The starting time is in the HTML too, so it reads right before the script runs. --}}
+@php $countdown = sprintf('%02d:%02d', intdiv($secondsLeft, 60), $secondsLeft % 60); @endphp
 <x-auth-shell x-data="resetCode({{ Js::from(['secondsLeft' => $secondsLeft, 'debugCode' => session('debug_code')]) }})">
     <h2 class="font-display font-extrabold text-brand text-2xl sm:text-[1.75rem] leading-tight">Enter your code</h2>
     <p class="mt-3 text-sm sm:text-base text-gray-500 leading-relaxed">
         If an account exists for <strong class="font-semibold text-gray-700 break-words">{{ $email }}</strong>, we've sent it a
-        6-digit code. It expires in {{ intdiv(\App\Enums\OtpPurpose::PasswordReset->lifetimeSeconds(), 60) }} minutes.
+        6&#8209;digit code. It expires in {{ intdiv(\App\Enums\OtpPurpose::PasswordReset->lifetimeSeconds(), 60) }} minutes.
     </p>
 
     @include('auth.partials.notices')
@@ -38,7 +40,7 @@
         @enderror
 
         <p x-show="secondsLeft > 0" class="mt-6 text-center text-sm text-gray-500">
-            You can resend the code in <strong class="font-semibold text-gray-700 tabular-nums" x-text="countdown"></strong>
+            You can resend the code in <strong class="font-semibold text-gray-700 tabular-nums" x-text="countdown">{{ $countdown }}</strong>
         </p>
         <p x-show="secondsLeft === 0" x-cloak class="mt-6 text-center text-sm text-gray-500">Didn't get it, or did it expire? Send a new one below.</p>
 
@@ -57,7 +59,7 @@
                 class="mt-3 w-full flex items-center justify-between gap-3 bg-white border text-base font-medium px-5 py-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40">
             <span x-show="!resending">Resend code</span>
             <span x-show="resending" x-cloak class="inline-flex items-center gap-2" role="status">@include('partials.spinner', ['tone' => 'brand']) Sending</span>
-            <span x-show="secondsLeft > 0" class="text-sm tabular-nums" x-text="countdown" aria-hidden="true"></span>
+            <span x-show="secondsLeft > 0" class="text-sm tabular-nums" x-text="countdown" aria-hidden="true">{{ $countdown }}</span>
         </button>
     </form>
 

@@ -26,7 +26,7 @@
         'assignee' => ['label' => 'Assigned to', 'class' => 'px-3', 'sortable' => false],
         'status' => ['label' => 'Status', 'class' => 'px-3'],
         'created_at' => ['label' => 'Date opened', 'class' => $showActions ? 'px-3' : 'pl-3 pr-5'],
-        'actions' => $showActions ? ['label' => 'Actions', 'class' => 'pl-3 pr-5', 'sortable' => false] : null,
+        'actions' => $showActions ? ['label' => 'View', 'class' => 'pl-3 pr-5', 'sortable' => false] : null,
     ]);
 
     $sortUrl = function (string $column) use ($filters) {
@@ -105,9 +105,10 @@
 
                         @if ($showActions)
                             <td class="pl-3 pr-5 py-3 whitespace-nowrap">
-                                <a href="{{ route('tickets.show', $ticket) }}" aria-label="View {{ $ticket->ticket_number }}"
-                                   class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-brand hover:text-brand transition-colors">
-                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> View
+                                {{-- Icon-only so the whole table still fits a laptop screen; the label is for screen readers and on hover. --}}
+                                <a href="{{ route('tickets.show', $ticket) }}" aria-label="View {{ $ticket->ticket_number }}" title="View ticket"
+                                   class="w-8 h-8 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:border-brand hover:text-brand transition-colors">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
                                 </a>
                             </td>
                         @endif

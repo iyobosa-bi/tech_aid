@@ -9,7 +9,7 @@
 <x-auth-shell x-data="{ sending: false }">
     <h2 class="font-display font-extrabold text-brand text-2xl sm:text-[1.75rem] leading-tight">Forgot your password?</h2>
     <p class="mt-3 text-sm sm:text-base text-gray-500 leading-relaxed">
-        Enter the email you sign in with. We'll send you a 6-digit code to reset your password.
+        Enter the email you sign in with. We'll send you a 6&#8209;digit code to reset your password.
     </p>
 
     @include('auth.partials.notices')

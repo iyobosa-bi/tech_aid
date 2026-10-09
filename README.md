@@ -1,6 +1,6 @@
 # Tech Aid
 
-Internal technology support and ticketing for optimusbank.com. Staff outside the
+Internal technology support and ticketing for xyz.com. Staff outside the
 Technology department raise tickets. Each ticket moves through an approval and
 resolution chain:
 
@@ -13,6 +13,8 @@ resolution chain:
 | Area | What works |
 |---|---|
 | **Sign-in with email OTP** | Email and password first, then a 6-digit code entered in a modal (no page reload). Each code lasts 60 seconds, and the modal counts it down. When the countdown reaches zero, *Resend OTP* becomes available. OTP resend is limited to 3 per 10 minutes, and login attempts are rate-limited. Pages are sent with `Cache-Control: no-store`, so the back button can't reveal a signed-out session. |
+| **Forgot password** | *Forgot password?* on the sign-in card leads to three steps.<br>1. **Email:** the reply is the same whether or not the account exists.<br>2. **6-digit code:** it lasts 3 minutes, works once, and stops working after 5 wrong tries. Codes can be requested at most 3 times per 10 minutes.<br>3. **New password:** 8+ characters with upper and lower case, a number and a symbol.<br>Afterwards, other sessions are signed out and a "your password was changed" email is sent. The next sign-in still needs a login code. In local debug mode the code is also printed in the browser console. |
+| **Accounts** | There's no self-registration. Staff can only change their password (Settings); name, email and the account belong to the Admin. **Admin → Users** lists every account, with search and Role/Status filters. Accounts can be deactivated (can't sign in, signed out immediately; can be undone), activated again, or deleted (kept for the audit trail, and the email can be reused). Admins can't deactivate or delete themselves. **Admin → All tickets** shows every ticket, read-only. |
 | **Roles & permissions** | 5 roles (Requester, Line Manager, Head of Service Management, Application Support, Admin), each with 2 permissions, via Spatie. `TicketPolicy` handles per-ticket checks. A denied action redirects back with the policy's message (JSON 403 for API/AJAX). |
 | **Raise a ticket**  | Title, description, category and priority. Up to 5 attachments via FilePond (10 MB each; jpg, png, pdf, doc, docx). The ticket starts as `pending_line_manager_approval`, the action is written to the audit history, and the Line Manager is notified by email and in-app (queued). |
 | **Ticket list** | Live search as you type (ticket ID or title, plus requester name for handlers), a status filter, sortable columns and 15 per page. Each user sees only their own slice: Head of Service Management sees every ticket; everyone else sees tickets they raised, manage or are assigned to. On narrow screens the table scrolls sideways with the ID column pinned. |
@@ -113,7 +115,7 @@ they never duplicate accounts or reset passwords.
 | `hosm@example.com` | Head of Service Management | Sees every ticket |
 | `support@example.com` | Application Support | Sade Support |
 | `support2@example.com` | Application Support | Bola Support. Two support staff, so auto-assign and reassign can be tried |
-| `admin@example.com` | Admin | Password `Admin1234@@@`. Runs System settings (auto-assign, on leave) |
+| `admin@example.com` | Admin | Password `Admin1234@@@`. Runs Users (deactivate / activate / delete), All tickets (read-only) and System settings (auto-assign, on leave) |
 
 ### Getting the OTP code locally
 

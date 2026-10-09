@@ -27,16 +27,16 @@
             <button type="submit" class="h-11 px-5 rounded-lg bg-brand hover:bg-brand-dark text-white font-display font-semibold text-sm shadow-sm transition-colors">Search</button>
         </div>
 
-        <div class="flex gap-2 lg:ml-auto">
+        <div class="flex gap-2 w-full lg:w-auto lg:ml-auto">
             <select name="role" onchange="this.form.submit()" aria-label="Filter by role"
-                    class="h-11 flex-1 lg:w-52 rounded-lg border border-brand bg-white pl-3 pr-8 text-sm {{ $filters['role'] ? 'text-brand font-medium' : 'text-gray-500' }} focus:outline-none focus:ring-2 focus:ring-brand/20">
+                    class="h-11 min-w-0 flex-1 lg:flex-none lg:w-52 rounded-lg border border-brand bg-white pl-3 pr-8 text-sm {{ $filters['role'] ? 'text-brand font-medium' : 'text-gray-500' }} focus:outline-none focus:ring-2 focus:ring-brand/20">
                 <option value="">All roles</option>
                 @foreach ($roles as $role)
                     <option value="{{ $role->value }}" class="text-gray-900" @selected($filters['role'] === $role->value)>{{ $role->value }}</option>
                 @endforeach
             </select>
             <select name="status" onchange="this.form.submit()" aria-label="Filter by status"
-                    class="h-11 flex-1 lg:w-40 rounded-lg border border-brand bg-white pl-3 pr-8 text-sm {{ $filters['status'] ? 'text-brand font-medium' : 'text-gray-500' }} focus:outline-none focus:ring-2 focus:ring-brand/20">
+                    class="h-11 min-w-0 flex-1 lg:flex-none lg:w-40 rounded-lg border border-brand bg-white pl-3 pr-8 text-sm {{ $filters['status'] ? 'text-brand font-medium' : 'text-gray-500' }} focus:outline-none focus:ring-2 focus:ring-brand/20">
                 <option value="">All statuses</option>
                 <option value="active" class="text-gray-900" @selected($filters['status'] === 'active')>Active</option>
                 <option value="deactivated" class="text-gray-900" @selected($filters['status'] === 'deactivated')>Deactivated</option>
