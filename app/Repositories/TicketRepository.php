@@ -67,14 +67,16 @@ class TicketRepository
     }
 
     /**
-     * Everything the ticket page shows, in display order: history oldest first.
+     * Everything the ticket page shows, in display order: history oldest first. Each file knows
+     * the step it came with (e.g. the resolution), and each step lists its files.
      */
     public function loadForDetail(Ticket $ticket): Ticket
     {
         return $ticket->load([
             'requester', 'lineManager', 'assignedTo',
-            'attachments' => fn ($query) => $query->orderBy('id'),
-            'statusHistory' => fn ($query) => $query->with('actor')->orderBy('created_at')->orderBy('id'),
+            'attachments' => fn ($query) => $query->with(['statusHistory:id,action', 'uploadedBy:id,name'])->orderBy('id'),
+            'statusHistory' => fn ($query) => $query->with(['actor', 'attachments' => fn ($files) => $files->orderBy('id')])
+                ->orderBy('created_at')->orderBy('id'),
         ]);
     }
 

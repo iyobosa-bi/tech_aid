@@ -70,30 +70,57 @@ function ticketDecision(config) {
     };
 }
 
-// Head of Service Management's actions (Flows 5–6). "pick" = Assign / Reassign: choosing a
-// person and pressing "Assign to {name}" is the confirmation. "resolve" = Resolve directly:
-// required notes first, then a confirmation that quotes them before anything is sent.
+// Head of Service Management's Assign / Reassign (Flows 5–6): choosing a person and pressing
+// "Assign to {name}" is the confirmation. Resolve directly is ticketResolution, below.
 function ticketAssignment(config) {
     return {
-        modal: null, // 'pick' | 'resolve' | null
-        step: 'notes', // resolve: 'notes' → 'confirm'
+        modal: null, // 'pick' | null
         selected: config.selected ?? null,
         verb: config.verb,
         note: config.note ?? '',
         pickError: config.pickError ?? '',
-        notes: config.notes ?? '',
-        notesTouched: false,
-        notesServerError: config.notesError ?? '',
         submitting: false,
 
         init() {
             // The server rejected the input (e.g. the person went on leave meanwhile): reopen with its message.
-            if (config.reopen === 'pick') this.openPick();
-            if (config.reopen === 'resolve') this.openResolve();
+            if (config.reopen) this.openPick();
         },
 
         get selectedName() {
             return this.selected ? (config.names[this.selected] ?? '') : '';
+        },
+
+        openPick() {
+            this.modal = 'pick';
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        close() {
+            if (!this.submitting) this.modal = null;
+        },
+    };
+}
+
+// Resolving a ticket — the assigned support person's "Resolve" (Flow 7) and Head of Service
+// Management's "Resolve directly" (Flow 5). Required notes and optional files first, then a
+// confirmation that quotes the notes and lists the files before anything is sent.
+function ticketResolution(config) {
+    return {
+        open: false,
+        step: 'notes', // 'notes' → 'confirm'
+        notes: config.notes ?? '',
+        notesTouched: false,
+        notesServerError: config.notesError ?? '',
+        filesError: config.filesError ?? '',
+        pond: null,
+        pendingUploads: 0,
+        failedUploads: 0,
+        fileNames: [],
+        submitting: false,
+
+        init() {
+            // The server rejected the input (e.g. notes too short, or a file expired): reopen with its message.
+            if (config.reopen) this.openModal();
         },
 
         get notesError() {
@@ -110,39 +137,76 @@ function ticketAssignment(config) {
             return this.notesServerError || (this.notesTouched ? this.notesError : '');
         },
 
-        openPick() {
-            this.modal = 'pick';
-            this.$nextTick(() => lucide.createIcons());
+        openModal() {
+            this.open = true;
+            this.step = 'notes';
+            // FilePond measures itself when created, so wait until the modal is actually on screen.
+            afterShown(this.$refs.notesStep, () => {
+                this.createPond();
+                this.$refs.notes.focus();
+            });
         },
 
-        openResolve() {
-            this.modal = 'resolve';
-            this.step = 'notes';
-            this.$nextTick(() => this.$refs.resolutionNotes?.focus());
+        createPond() {
+            if (this.pond || !this.$refs.files) return;
+
+            this.pond = createTicketPond(this.$refs.files, {
+                maxFiles: config.maxFiles,
+                files: config.existingUploads,
+                urls: config.urls,
+                onChange: (pond) => this.syncFiles(pond),
+            });
+        },
+
+        syncFiles(pond) {
+            const state = ticketPondState(pond);
+            this.pendingUploads = state.pending;
+            this.failedUploads = state.failed;
+            this.fileNames = state.names;
+            if (!state.pending && !state.failed) this.filesError = '';
         },
 
         toConfirm() {
             this.notesTouched = true;
 
             if (this.notesError) {
-                this.$refs.resolutionNotes.focus();
+                this.$refs.notes.focus();
+                return;
+            }
+
+            if (this.pond) this.syncFiles(this.pond);
+            if (this.pendingUploads) {
+                this.filesError = 'Please wait for your files to finish uploading.';
+                return;
+            }
+            if (this.failedUploads) {
+                this.filesError = 'Remove the files that failed before continuing.';
                 return;
             }
 
             this.step = 'confirm';
-            this.$nextTick(() => this.$refs.resolveConfirm.focus());
+            afterShown(this.$refs.confirm, () => this.$refs.confirm.focus());
         },
 
         close() {
-            if (!this.submitting) this.modal = null;
+            if (!this.submitting) this.open = false;
         },
 
         // form.submit() skips the @submit handler, so this is the only path that actually sends.
-        submit(formRef) {
+        submit() {
             this.submitting = true;
-            this.$refs[formRef].submit();
+            this.$refs.form.submit();
         },
     };
+}
+
+// x-show reveals an element one animation frame after the state changes, and focus() or
+// measuring a still-hidden element silently does nothing — so wait until it's on screen.
+function afterShown(el, callback, framesLeft = 10) {
+    requestAnimationFrame(() => {
+        if (!el || el.offsetParent !== null || framesLeft === 0) callback();
+        else afterShown(el, callback, framesLeft - 1);
+    });
 }
 
 // Quick view for images and PDFs. The <img>/<iframe> is created only while open, so a

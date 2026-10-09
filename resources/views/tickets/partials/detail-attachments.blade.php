@@ -20,7 +20,14 @@
                     </div>
                     <div class="min-w-0 flex-1">
                         <p class="text-sm font-medium text-gray-900 truncate" title="{{ $file->original_filename }}">{{ $file->original_filename }}</p>
-                        <p class="text-xs text-gray-500">{{ $file->extension() }} · {{ $file->humanSize() }}</p>
+                        <p class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-gray-500">
+                            @if ($file->isFromResolution())
+                                {{-- Added by whoever resolved the ticket, with the resolution notes. --}}
+                                <span class="rounded-full px-2 py-0.5 text-[11px] font-medium bg-green-100 text-green-700">Resolution</span>
+                                <span>{{ $file->uploadedBy?->name ?? 'Former staff member' }} ·</span>
+                            @endif
+                            <span>{{ $file->extension() }} · {{ $file->humanSize() }}</span>
+                        </p>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
                         @if ($file->isPreviewable())

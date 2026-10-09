@@ -10,6 +10,7 @@ use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\TicketCommentController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TicketDecisionController;
+use App\Http\Controllers\TicketProgressController;
 use App\Http\Controllers\TicketResolutionController;
 use App\Http\Controllers\TicketUploadController;
 use Illuminate\Support\Facades\Route;
@@ -66,6 +67,15 @@ Route::middleware(['auth', 'cache.headers:no_store'])->group(function () {
         Route::post('/tickets/{ticket}/assign', [TicketAssignmentController::class, 'assign'])->name('tickets.assign');
         Route::post('/tickets/{ticket}/reassign', [TicketAssignmentController::class, 'reassign'])->name('tickets.reassign');
         Route::post('/tickets/{ticket}/resolve', [TicketResolutionController::class, 'store'])->name('tickets.resolve');
+
+        // Flow 7: the assigned Application Support person starts work.
+        Route::post('/tickets/{ticket}/start', [TicketProgressController::class, 'store'])->name('tickets.start');
+
+        // Files for the resolve form (FilePond), allowed only to whoever may resolve this ticket.
+        Route::post('/tickets/{ticket}/resolution-uploads', [TicketUploadController::class, 'storeForResolution'])
+            ->middleware('throttle:30,1')->name('tickets.resolution-uploads.store');
+        Route::delete('/tickets/{ticket}/resolution-uploads', [TicketUploadController::class, 'destroyForResolution'])
+            ->name('tickets.resolution-uploads.destroy');
 
         Route::post('/tickets/{ticket}/comments', [TicketCommentController::class, 'store'])
             ->middleware('throttle:20,1')->name('tickets.comments.store');

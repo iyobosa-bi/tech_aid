@@ -10,8 +10,13 @@ use Illuminate\Support\Facades\Validator;
 
 /**
  * FilePond's async process/revert endpoints. The upload runs ahead of the
- * form submit so FilePond can show real upload progress; the ticket form
- * itself is still a traditional POST + redirect.
+ * form submit so FilePond can show real upload progress; the form itself is
+ * still a traditional POST + redirect.
+ *
+ * Two forms use them, each with its own permission check: the ticket form
+ * (anyone who may raise tickets) and the resolve form (only someone who may
+ * resolve that particular ticket — its assigned support person, or Head of
+ * Service Management resolving directly).
  */
 class TicketUploadController extends Controller
 {
@@ -23,6 +28,33 @@ class TicketUploadController extends Controller
     {
         $this->authorize('create', Ticket::class);
 
+        return $this->stash($request, $uploads);
+    }
+
+    public function destroy(Request $request, TicketUploadService $uploads): Response
+    {
+        $this->authorize('create', Ticket::class);
+
+        return $this->discard($request, $uploads);
+    }
+
+    // Files for a resolution (Flows 5 and 7).
+    public function storeForResolution(Request $request, Ticket $ticket, TicketUploadService $uploads): Response
+    {
+        $this->authorize('resolve', $ticket);
+
+        return $this->stash($request, $uploads);
+    }
+
+    public function destroyForResolution(Request $request, Ticket $ticket, TicketUploadService $uploads): Response
+    {
+        $this->authorize('resolve', $ticket);
+
+        return $this->discard($request, $uploads);
+    }
+
+    private function stash(Request $request, TicketUploadService $uploads): Response
+    {
         // FilePond posts the file under the input's own name ("attachments[]"),
         // but it ALSO always posts a JSON metadata part under that exact same
         // field name first (even when there's no real metadata - it's an
@@ -47,11 +79,10 @@ class TicketUploadController extends Controller
 
         return response($id, 200, ['Content-Type' => 'text/plain']);
     }
-    
-    public function destroy(Request $request, TicketUploadService $uploads): Response
-    {
-        $this->authorize('create', Ticket::class);
 
+    // Upload ids live in the uploader's session, so only their own files can be removed.
+    private function discard(Request $request, TicketUploadService $uploads): Response
+    {
         $uploads->discard(trim($request->getContent()));
 
         return response()->noContent();

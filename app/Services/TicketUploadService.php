@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Ticket;
+use App\Models\TicketStatusHistory;
 use App\Models\User;
 use App\Repositories\TicketRepository;
 use Illuminate\Http\UploadedFile;
@@ -87,10 +88,11 @@ class TicketUploadService
     /**
      * Moves resolved uploads into the ticket's folder and records them. Call inside the
      * ticket's DB::transaction so the rows and the ticket change commit together.
+     * $step is the workflow step they came with (e.g. the resolution); null when raising the ticket.
      *
      * @param  list<array{path: string, original_filename: string, mime_type: string, size: int}>  $uploads
      */
-    public function attachAll(Ticket $ticket, User $uploader, array $uploads): void
+    public function attachAll(Ticket $ticket, User $uploader, array $uploads, ?TicketStatusHistory $step = null): void
     {
         foreach ($uploads as $upload) {
             $path = 'tickets/'.$ticket->id.'/'.basename($upload['path']);
@@ -98,12 +100,40 @@ class TicketUploadService
 
             $this->tickets->addAttachment($ticket, [
                 'uploaded_by_id' => $uploader->id,
+                'status_history_id' => $step?->id,
                 'file_path' => $path,
                 'original_filename' => $upload['original_filename'],
                 'mime_type' => $upload['mime_type'],
                 'size' => $upload['size'],
             ]);
         }
+    }
+
+    /**
+     * After a failed form submit, FilePond re-shows the files already uploaded so they aren't
+     * lost ("limbo" files: on the server, not yet attached). Unknown or foreign ids are skipped.
+     *
+     * @param  array<mixed>  $ids  usually old('attachments')
+     * @return list<array{source: string, options: array{type: string, file: array{name: string, size: int, type: string}}}>
+     */
+    public function filePondFiles(array $ids): array
+    {
+        return collect($ids)
+            ->map(fn ($id) => [$id, is_string($id) ? $this->find($id) : null])
+            ->filter(fn (array $pair) => $pair[1] !== null)
+            ->map(fn (array $pair) => [
+                'source' => $pair[0],
+                'options' => [
+                    'type' => 'limbo',
+                    'file' => [
+                        'name' => $pair[1]['original_filename'],
+                        'size' => $pair[1]['size'],
+                        'type' => $pair[1]['mime_type'],
+                    ],
+                ],
+            ])
+            ->values()
+            ->all();
     }
 
     /**

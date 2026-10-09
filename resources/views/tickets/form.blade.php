@@ -218,5 +218,6 @@
     <script src="https://cdn.jsdelivr.net/npm/filepond-plugin-file-validate-type@1.2.9/dist/filepond-plugin-file-validate-type.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/filepond-plugin-file-validate-size@2.2.8/dist/filepond-plugin-file-validate-size.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/filepond@4.32.7/dist/filepond.min.js"></script>
+    <script src="{{ asset('js/ticket-uploads.js') }}?v={{ filemtime(public_path('js/ticket-uploads.js')) }}"></script>
     <script src="{{ asset('js/ticket-form.js') }}?v={{ filemtime(public_path('js/ticket-form.js')) }}"></script>
 @endpush

@@ -49,6 +49,21 @@
                             </span>
                         @endif
                         <div class="mt-1 px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-line break-words text-left {{ $mine ? 'bg-brand text-white rounded-tr-md' : 'bg-gray-100 text-gray-900 rounded-tl-md' }}">{{ $entry->comment }}</div>
+                        {{-- Files that came with this step, e.g. the resolution's screenshots or report. --}}
+                        @if ($entry->attachments->isNotEmpty())
+                            <ul class="mt-1.5 flex flex-wrap gap-1.5 {{ $mine ? 'justify-end' : '' }}">
+                                @foreach ($entry->attachments as $file)
+                                    <li class="min-w-0 max-w-full">
+                                        <a href="{{ route('tickets.attachments.download', [$ticket, $file]) }}" title="Download {{ $file->original_filename }}"
+                                           class="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:border-brand hover:text-brand transition-colors">
+                                            <i data-lucide="paperclip" class="w-3.5 h-3.5 shrink-0"></i>
+                                            <span class="truncate">{{ $file->original_filename }}</span>
+                                            <span class="text-gray-400 shrink-0">{{ $file->humanSize() }}</span>
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
                     </div>
                 </li>
             @endforeach

@@ -46,7 +46,7 @@ class TicketController extends Controller
         ]);
     }
 
-    public function show(Request $request, Ticket $ticket, TicketRepository $tickets, SupportAssignmentService $assignments): View
+    public function show(Request $request, Ticket $ticket, TicketRepository $tickets, SupportAssignmentService $assignments, TicketUploadService $uploads): View
     {
         $this->authorize('view', $ticket);
 
@@ -75,6 +75,10 @@ class TicketController extends Controller
                 : null,
             'supportStaff' => $supportStaff,
             'suggestedAssignee' => $candidates ? $assignments->leastBusy($candidates) : null,
+            // Flow 7: Start work / Resolve show only for the person the ticket is assigned to.
+            'isAssignee' => $ticket->assigned_to_id === $user->id,
+            // A failed resolve keeps its already-uploaded files in the reopened modal.
+            'resolutionUploads' => $user->can('resolve', $ticket) ? $uploads->filePondFiles((array) $request->old('attachments', [])) : [],
         ]);
     }
 
@@ -120,24 +124,6 @@ class TicketController extends Controller
     {
         $attachments = $ticket?->attachments ?? collect();
 
-        // After a failed validation, re-show files already uploaded so they aren't lost.
-        $existingUploads = collect($request->old('attachments', []))
-            ->map(fn ($id) => [$id, is_string($id) ? $uploads->find($id) : null])
-            ->filter(fn ($pair) => $pair[1] !== null)
-            ->map(fn ($pair) => [
-                'source' => $pair[0],
-                'options' => [
-                    'type' => 'limbo',
-                    'file' => [
-                        'name' => $pair[1]['original_filename'],
-                        'size' => $pair[1]['size'],
-                        'type' => $pair[1]['mime_type'],
-                    ],
-                ],
-            ])
-            ->values()
-            ->all();
-
         return [
             'ticket' => $ticket,
             'categories' => TicketCategory::cases(),
@@ -146,7 +132,8 @@ class TicketController extends Controller
             'attachments' => $attachments,
             // New files allowed on this form: the overall limit minus files already on the ticket.
             'maxAttachments' => max(0, StoreTicketRequest::MAX_ATTACHMENTS - $attachments->count()),
-            'existingUploads' => $existingUploads,
+            // After a failed validation, re-show files already uploaded so they aren't lost.
+            'existingUploads' => $uploads->filePondFiles((array) $request->old('attachments', [])),
             'returnedBy' => $ticket?->statusHistory->last(fn ($entry) => $entry->action === TicketAction::Rejected->value),
         ];
     }

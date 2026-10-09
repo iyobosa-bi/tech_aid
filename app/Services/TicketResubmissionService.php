@@ -6,6 +6,7 @@ use App\Enums\TicketAction;
 use App\Enums\TicketStatus;
 use App\Events\TicketResubmitted;
 use App\Models\Ticket;
+use App\Models\TicketStatusHistory;
 use App\Models\User;
 use App\Notifications\TicketAwaitingApproval;
 use App\Notifications\TicketStatusUpdated;
@@ -35,7 +36,7 @@ class TicketResubmissionService
             to: TicketStatus::PendingLineManagerApproval,
             comment: $data['note'] ?? null,
             changes: Arr::only($data, ['title', 'description', 'category', 'priority']),
-            during: fn (Ticket $locked) => $this->uploads->attachAll($locked, $requester, $uploads),
+            during: fn (Ticket $locked, TicketStatusHistory $step) => $this->uploads->attachAll($locked, $requester, $uploads, $step),
         );
 
         $this->uploads->forgetAll($uploadIds);

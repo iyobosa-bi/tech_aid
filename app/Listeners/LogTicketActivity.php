@@ -10,6 +10,7 @@ use App\Events\TicketDeclined;
 use App\Events\TicketReassigned;
 use App\Events\TicketResolved;
 use App\Events\TicketResubmitted;
+use App\Events\TicketWorkStarted;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -70,9 +71,18 @@ class LogTicketActivity
         ]);
     }
 
+    public function handleTicketWorkStarted(TicketWorkStarted $event): void
+    {
+        Log::channel('activity')->info('Ticket work started', $this->context($event->ticket, $event->actor));
+    }
+
+    // How many files came with the resolution — never their names or the notes text.
     public function handleTicketResolved(TicketResolved $event): void
     {
-        Log::channel('activity')->info('Ticket resolved', $this->context($event->ticket, $event->actor));
+        Log::channel('activity')->info('Ticket resolved', [
+            ...$this->context($event->ticket, $event->actor),
+            'attachments' => $event->attachmentCount,
+        ]);
     }
 
     /**

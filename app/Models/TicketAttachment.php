@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TicketAction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,6 +18,7 @@ class TicketAttachment extends Model
     protected $fillable = [
         'ticket_id',
         'uploaded_by_id',
+        'status_history_id', // the workflow step it came with (e.g. resolved); null = attached when raised
         'file_path',
         'original_filename',
         'mime_type',
@@ -30,7 +32,18 @@ class TicketAttachment extends Model
 
     public function uploadedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'uploaded_by_id');
+        return $this->belongsTo(User::class, 'uploaded_by_id')->withTrashed();
+    }
+
+    public function statusHistory(): BelongsTo
+    {
+        return $this->belongsTo(TicketStatusHistory::class, 'status_history_id');
+    }
+
+    // Added by whoever resolved the ticket (Flow 5 directly, or Flow 7), alongside the resolution notes.
+    public function isFromResolution(): bool
+    {
+        return $this->statusHistory?->action === TicketAction::Resolved->value;
     }
 
     public function isPreviewable(): bool

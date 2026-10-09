@@ -97,17 +97,37 @@ class TicketPolicy
             : Response::deny('Only tickets that are with Application Support can be reassigned.');
     }
 
+    // Flow 7: only the Application Support person the ticket is assigned to works on it.
+    public function startProgress(User $user, Ticket $ticket): Response
+    {
+        if (! $this->isAssignedSupport($user, $ticket)) {
+            return Response::deny('Only the person this ticket is assigned to can start work on it.');
+        }
+
+        return match ($ticket->status) {
+            TicketStatus::Assigned->value => Response::allow(),
+            // Also reached from a second tab after work already started.
+            TicketStatus::InProgress->value => Response::deny('Work on this ticket has already started.'),
+            default => Response::deny('You can\'t start work on this ticket at its current stage.'),
+        };
+    }
+
+    // Also covers uploading files for the resolution (TicketUploadController).
     public function resolve(User $user, Ticket $ticket): Response
     {
-        $assignedSupport = $user->checkPermissionTo(PermissionName::ResolveTickets)
-            && $ticket->assigned_to_id === $user->id
-            && $this->statusIs($ticket, TicketStatus::Assigned, TicketStatus::InProgress, TicketStatus::Reopened);
-
         // Head of Service Management may resolve directly instead of assigning (Flow 5).
-        $directResolve = $user->checkPermissionTo(PermissionName::AssignTickets)
-            && $this->statusIs($ticket, TicketStatus::PendingAssignment);
+        if ($user->checkPermissionTo(PermissionName::AssignTickets)) {
+            return $this->statusIs($ticket, TicketStatus::PendingAssignment)
+                ? Response::allow()
+                : Response::deny('You can\'t resolve this ticket at its current stage.');
+        }
 
-        return $assignedSupport || $directResolve
+        // Flow 7: the assigned support person, with or without starting work first.
+        if (! $this->isAssignedSupport($user, $ticket)) {
+            return Response::deny('Only the person this ticket is assigned to can resolve it.');
+        }
+
+        return $this->statusIs($ticket, TicketStatus::Assigned, TicketStatus::InProgress, TicketStatus::Reopened)
             ? Response::allow()
             : Response::deny('You can\'t resolve this ticket at its current stage.');
     }
@@ -127,6 +147,12 @@ class TicketPolicy
         return $user->checkPermissionTo(PermissionName::RespondToResolutions)
             && $ticket->requester_id === $user->id
             && $this->statusIs($ticket, TicketStatus::Resolved);
+    }
+
+    // Application Support, and this ticket is theirs (not a colleague's).
+    private function isAssignedSupport(User $user, Ticket $ticket): bool
+    {
+        return $user->checkPermissionTo(PermissionName::ResolveTickets) && $ticket->assigned_to_id === $user->id;
     }
 
     private function statusIs(Ticket $ticket, TicketStatus ...$statuses): bool

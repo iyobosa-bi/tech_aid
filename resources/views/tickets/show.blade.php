@@ -9,13 +9,15 @@
     $category = TicketCategory::tryFrom((string) $ticket->category)?->label() ?? '—';
     $priority = TicketPriority::tryFrom($ticket->priority)?->label() ?? ucfirst($ticket->priority);
     $requesterName = $ticket->requester?->name ?? 'Unknown';
+    $assigneeName = $ticket->assignedTo?->name ?? 'Application Support';
 
     // A one-line "what happens next" for the waiting statuses.
     $nextStep = match ($ticket->status) {
         TicketStatus::PendingLineManagerApproval->value => 'Waiting for '.($ticket->lineManager?->name ?? 'the line manager').' to approve.',
         TicketStatus::Returned->value => "Waiting for {$requesterName} to edit and resubmit.",
         TicketStatus::PendingAssignment->value => 'Waiting for Head of Service Management to assign it.',
-        TicketStatus::Assigned->value, TicketStatus::InProgress->value => 'With '.($ticket->assignedTo?->name ?? 'Application Support').' to work on.',
+        TicketStatus::Assigned->value => $isAssignee ? 'Waiting for you to start work.' : "Waiting for {$assigneeName} to start work.",
+        TicketStatus::InProgress->value => $isAssignee ? "You're working on it." : "{$assigneeName} is working on it.",
         TicketStatus::Resolved->value => "Waiting for {$requesterName} to confirm the fix.",
         default => null,
     };
@@ -48,6 +50,8 @@
             @endcan
             @if ($supportStaff)
                 @include('tickets.partials.detail-assignment')
+            @elseif ($isAssignee)
+                @include('tickets.partials.detail-work')
             @endif
             @can('resubmit', $ticket)
                 <a href="{{ route('tickets.edit', $ticket) }}"
@@ -120,6 +124,20 @@
     </div>
 </div>
 @endsection
+
+{{-- The resolve modal's file dropzone — only for someone who may resolve this ticket. --}}
+@can('resolve', $ticket)
+    @push('head')
+        <link href="https://cdn.jsdelivr.net/npm/filepond@4.32.7/dist/filepond.min.css" rel="stylesheet" />
+        <link href="{{ asset('css/filepond-theme.css') }}" rel="stylesheet" />
+    @endpush
+    @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/filepond-plugin-file-validate-type@1.2.9/dist/filepond-plugin-file-validate-type.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/filepond-plugin-file-validate-size@2.2.8/dist/filepond-plugin-file-validate-size.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/filepond@4.32.7/dist/filepond.min.js"></script>
+        <script src="{{ asset('js/ticket-uploads.js') }}?v={{ filemtime(public_path('js/ticket-uploads.js')) }}"></script>
+    @endpush
+@endcan
 
 @push('scripts')
     <script src="{{ asset('js/ticket-show.js') }}?v={{ filemtime(public_path('js/ticket-show.js')) }}"></script>

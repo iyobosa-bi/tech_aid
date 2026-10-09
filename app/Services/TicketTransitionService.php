@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\TicketAction;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
+use App\Models\TicketStatusHistory;
 use App\Models\User;
 use App\Repositories\TicketRepository;
 use Closure;
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Moves a ticket from one status to another with its audit-trail entry, as one
- * transaction. Every workflow step (approve, decline, resubmit, assign, reassign, resolve —
+ * transaction. Every workflow step (approve, decline, resubmit, assign, reassign, start work, resolve —
  * later reopen) goes through here so status and history can never disagree.
  */
 class TicketTransitionService
@@ -26,7 +27,8 @@ class TicketTransitionService
     /**
      * @param  User|null  $actor  null when the system acts on its own (auto-assign)
      * @param  array<string, mixed>  $changes  other ticket fields to save with the status
-     * @param  (Closure(Ticket): void)|null  $during  extra writes that must commit with the move
+     * @param  (Closure(Ticket, TicketStatusHistory): void)|null  $during  extra writes that must commit with
+     *                                                                   the move, e.g. files attached to this step
      * @param  array<string, mixed>  $meta  structured detail for the history row, e.g. from/to assignee
      *
      * @throws AuthorizationException when the ticket left $from before this request got here
@@ -53,11 +55,7 @@ class TicketTransitionService
 
             $this->tickets->update($locked, [...$changes, 'status' => $to->value]);
 
-            if ($during) {
-                $during($locked);
-            }
-
-            $this->tickets->logHistory($locked, [
+            $entry = $this->tickets->logHistory($locked, [
                 'actor_id' => $actor?->id,
                 'actor_role' => $actor ? $actor->getRoleNames()->first() : self::SYSTEM_ROLE,
                 'action' => $action->value,
@@ -66,6 +64,11 @@ class TicketTransitionService
                 'comment' => $comment,
                 'meta' => $meta ?: null,
             ]);
+
+            // After the history row exists, so extra records (e.g. files) can point at this step.
+            if ($during) {
+                $during($locked, $entry);
+            }
 
             return $locked;
         });
