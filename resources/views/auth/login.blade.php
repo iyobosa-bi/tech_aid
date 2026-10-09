@@ -1,5 +1,10 @@
 @extends('layouts.guest', ['title' => 'Login — Tech Aid'])
 
+{{-- Start downloading the photo straight away, alongside the CDN scripts, so it's ready by first paint. --}}
+@push('head')
+    <link rel="preload" as="image" href="{{ asset('images/login-bg.jpg') }}" fetchpriority="high" />
+@endpush
+
 @section('content')
 
 <div x-data="loginPage()"
@@ -10,13 +15,10 @@
      data-old-email="{{ old('email') }}"
      class="h-full flex"
 >
-    {{-- Both panels go inert while the OTP modal is open: nothing behind it can be focused, clicked or typed into. --}}
+    {{-- Both panels go inert while the OTP modal is open: nothing behind it can be focused, clicked or typed into.
+         No animations or transitions anywhere on this screen for now (design/style-notes.md, "Wordmark"). --}}
     <div
-        x-show="revealed"
         x-effect="$el.inert = otpOpen"
-        x-transition:enter="transition ease-out duration-500"
-        x-transition:enter-start="opacity-0 -translate-x-4"
-        x-transition:enter-end="opacity-100 translate-x-0"
         class="hidden md:flex md:w-[33%] bg-brand flex-col items-center justify-center relative px-8"
     >
         <div class="w-432 h-4366 rounded-2xl bg-white flex items-center justify-center mb-6 shadow-xl">
@@ -32,25 +34,20 @@
             </svg>
         </div>
 
-        <h1 class="font-display font-extrabold text-white text-3xl tracking-tight flex" aria-label="Tech Aid">
-            <span class="letter-anim" style="animation-delay: 0.05s">T</span>
-            <span class="letter-anim" style="animation-delay: 0.10s">e</span>
-            <span class="letter-anim" style="animation-delay: 0.15s">c</span>
-            <span class="letter-anim" style="animation-delay: 0.20s">h</span>
-            <span class="letter-anim" style="animation-delay: 0.28s">&nbsp;</span>
-            <span class="letter-anim" style="animation-delay: 0.33s">A</span>
-            <span class="letter-anim" style="animation-delay: 0.38s">i</span>
-            <span class="letter-anim" style="animation-delay: 0.43s">d</span>
-        </h1>
+        <h1 class="font-display font-extrabold text-white text-3xl tracking-tight">Tech Aid</h1>
 
         <p class="font-display text-white/70 text-sm text-center mt-3 max-w-[220px] leading-relaxed">
             Internal technology support &amp; ticketing for optimusbank.com
         </p>
     </div>
 
-    <!-- RIGHT: full-bleed photo + floating card -->
-    <div class="flex-1 relative overflow-hidden bg-brand-dark" x-effect="$el.inert = otpOpen">
-        <img src="{{ asset('images/login-bg.svg') }}" alt="" class="absolute inset-0 w-full h-full object-cover" />
+    <!-- RIGHT: full-bleed photo + floating card. bg-brand matches the left panel, so there's no seam while the photo loads. -->
+    <div class="flex-1 relative overflow-hidden bg-brand" x-effect="$el.inert = otpOpen">
+        <img src="{{ asset('images/login-bg.jpg') }}" alt="" fetchpriority="high" width="890" height="1024"
+             class="absolute inset-0 w-full h-full object-cover" />
+
+        <!-- soft brand tint: blends the photo's left edge into the blue panel -->
+        <div class="absolute inset-0 bg-[linear-gradient(90deg,rgb(21_42_158/0.3)_41%,rgb(21_42_158/0.03)_100%)]"></div>
 
         <!-- dark overlay, mobile only — improves contrast since blue panel is hidden -->
         <div class="absolute inset-0 bg-brand-dark/50 md:hidden"></div>
@@ -69,44 +66,32 @@
                     <path d="M14 28 C18 18, 26 14, 34 16 C28 18, 24 24, 26 32 C20 32, 15 32, 14 28 Z" fill="url(#logoGradM)"/>
                 </svg>
             </div>
-            <h1 class="font-display font-extrabold text-white text-xl tracking-tight flex" aria-label="Tech Aid">
-                <span class="letter-anim" style="animation-delay: 0.05s">T</span>
-                <span class="letter-anim" style="animation-delay: 0.10s">e</span>
-                <span class="letter-anim" style="animation-delay: 0.15s">c</span>
-                <span class="letter-anim" style="animation-delay: 0.20s">h</span>
-                <span class="letter-anim" style="animation-delay: 0.28s">&nbsp;</span>
-                <span class="letter-anim" style="animation-delay: 0.33s">A</span>
-                <span class="letter-anim" style="animation-delay: 0.38s">i</span>
-                <span class="letter-anim" style="animation-delay: 0.43s">d</span>
-            </h1>
+            <h1 class="font-display font-extrabold text-white text-xl tracking-tight">Tech Aid</h1>
         </div>
 
-        <div
-        
-            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] sm:w-full max-w-[440px] mx-auto sm:mx-4"
-        >
-            <div class="bg-white rounded-xl shadow-2xl p-6 sm:p-8">
-                <h2 class="font-display font-bold text-brand text-lg mb-6">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-[520px]">
+            <div class="bg-white rounded-2xl shadow-2xl p-7 sm:p-10">
+                <h2 class="font-display font-extrabold text-brand text-2xl sm:text-[1.75rem] leading-tight mb-7 sm:mb-8">
                     Sign in to Tech Aid
                 </h2>
                 <div
                     x-show="loginError"
                     x-cloak
                     role="alert"
-                    class="mb-5 flex items-start gap-2 px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg"
+                    class="mb-6 flex items-start gap-2 px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg"
                 >
                   <i data-lucide="circle-alert" class="w-4 h-4 text-red-600 shrink-0"></i>
-                  <p x-text="loginError" class="text-xs font-semibold leading-4 text-red-700"></p>
+                  <p x-text="loginError" class="text-sm font-semibold leading-5 text-red-700"></p>
                 </div>
 
                 {{-- novalidate: our live messages replace the browser's own validation bubbles. --}}
-                <form method="POST" action="{{ route('login') }}" class="space-y-5" novalidate @submit.prevent="login()">
+                <form method="POST" action="{{ route('login') }}" class="space-y-6" novalidate @submit.prevent="login()">
                     @csrf
 
                     <div>
-                        <label for="email" class="block font-display font-medium text-brand text-sm mb-1.5">Email</label>
+                        <label for="email" class="block font-display font-semibold text-brand text-sm mb-2">Email</label>
                         <div class="relative">
-                            <i data-lucide="mail" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 transition-colors"
+                            <i data-lucide="mail" class="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2"
                                :class="emailInvalid ? 'text-red-500' : 'text-gray-400'"></i>
                             <input
                                 id="email" name="email" type="email" required autofocus autocomplete="username"
@@ -114,24 +99,24 @@
                                 x-ref="emailInput" x-model="email"
                                 @input.debounce.500ms="touched.email = true" @blur="touched.email = true"
                                 :aria-invalid="emailInvalid.toString()" aria-describedby="email-error"
-                                class="w-full pl-10 pr-3 py-2.5 rounded-lg border text-gray-800 text-sm placeholder:text-gray-400
-                                       transition-colors focus:outline-none focus:ring-2"
+                                class="w-full pl-11 pr-3 py-3 rounded-lg border text-gray-800 text-base placeholder:text-gray-400
+                                       focus:outline-none focus:ring-2"
                                 :class="emailInvalid
                                     ? 'border-red-400 bg-red-50/40 focus:ring-red-500/20 focus:border-red-500'
                                     : 'border-gray-200 bg-white focus:ring-brand/20 focus:border-brand'"
                             />
                         </div>
-                        <p id="email-error" x-show="emailInvalid" x-cloak x-transition.opacity.duration.150ms
-                           class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-red-600">
-                            <i data-lucide="circle-alert" class="w-3.5 h-3.5 mt-px shrink-0"></i>
+                        <p id="email-error" x-show="emailInvalid" x-cloak
+                           class="mt-2 flex items-start gap-1.5 text-sm font-medium text-red-600">
+                            <i data-lucide="circle-alert" class="w-4 h-4 mt-0.5 shrink-0"></i>
                             <span x-text="emailError"></span>
                         </p>
                     </div>
 
                     <div>
-                        <label for="password" class="block font-display font-medium text-brand text-sm mb-1.5">Password</label>
+                        <label for="password" class="block font-display font-semibold text-brand text-sm mb-2">Password</label>
                         <div class="relative">
-                            <i data-lucide="lock" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 transition-colors"
+                            <i data-lucide="lock" class="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2"
                                :class="passwordInvalid ? 'text-red-500' : 'text-gray-400'"></i>
                             <input
                                 :type="showPw ? 'text' : 'password'"
@@ -139,21 +124,21 @@
                                 x-ref="passwordInput" x-model="password"
                                 @input.debounce.500ms="touched.password = true" @blur="touched.password = true"
                                 :aria-invalid="passwordInvalid.toString()" aria-describedby="password-error"
-                                class="w-full pl-10 pr-10 py-2.5 rounded-lg border text-gray-800 text-sm placeholder:text-gray-400
-                                       transition-colors focus:outline-none focus:ring-2"
+                                class="w-full pl-11 pr-11 py-3 rounded-lg border text-gray-800 text-base placeholder:text-gray-400
+                                       focus:outline-none focus:ring-2"
                                 :class="passwordInvalid
                                     ? 'border-red-400 bg-red-50/40 focus:ring-red-500/20 focus:border-red-500'
                                     : 'border-gray-200 bg-white focus:ring-brand/20 focus:border-brand'"
                             />
                             <button type="button" @click="showPw = !showPw" :aria-label="showPw ? 'Hide password' : 'Show password'"
-                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                <i data-lucide="eye" class="w-4 h-4" x-show="!showPw"></i>
-                                <i data-lucide="eye-off" class="w-4 h-4" x-show="showPw"></i>
+                                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <span x-show="!showPw"><i data-lucide="eye" class="w-5 h-5"></i></span>
+                                <span x-show="showPw" x-cloak><i data-lucide="eye-off" class="w-5 h-5"></i></span>
                             </button>
                         </div>
-                        <p id="password-error" x-show="passwordInvalid" x-cloak x-transition.opacity.duration.150ms
-                           class="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-red-600">
-                            <i data-lucide="circle-alert" class="w-3.5 h-3.5 mt-px shrink-0"></i>
+                        <p id="password-error" x-show="passwordInvalid" x-cloak
+                           class="mt-2 flex items-start gap-1.5 text-sm font-medium text-red-600">
+                            <i data-lucide="circle-alert" class="w-4 h-4 mt-0.5 shrink-0"></i>
                             <span x-text="passwordError"></span>
                         </p>
                     </div>
@@ -161,7 +146,7 @@
                     <button
                         type="submit"
                         :disabled="loggingIn"
-                        class="w-full inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark disabled:opacity-80 disabled:cursor-wait text-white text-sm font-semibold py-2.5 rounded-lg transition-colors mt-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40"
+                        class="w-full inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark disabled:opacity-80 disabled:cursor-wait text-white text-base font-semibold py-3 rounded-lg mt-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40"
                         >
                         <span x-show="!loggingIn">Login</span>
                         <span x-show="loggingIn" x-cloak class="inline-flex items-center gap-2" role="status">
@@ -179,7 +164,7 @@
         <div class="relative w-full max-w-[35rem] bg-white rounded-2xl shadow-2xl p-6 sm:p-10 my-auto">
             {{-- Closing cancels the pending login (and its code), back to the sign-in form. --}}
             <button type="button" @click="cancel()" aria-label="Close and sign in again"
-                    class="absolute top-4 right-4 sm:top-6 sm:right-6 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+                    class="absolute top-4 right-4 sm:top-6 sm:right-6 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
 
@@ -216,7 +201,7 @@
 
             <button type="button" @click="verify()" :disabled="verifying || !canVerify"
                     :class="verifying ? 'cursor-wait opacity-80' : (canVerify ? '' : 'cursor-not-allowed opacity-50')"
-                    class="mt-6 w-full inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark disabled:hover:bg-brand text-white text-base font-semibold py-3.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40">
+                    class="mt-6 w-full inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark disabled:hover:bg-brand text-white text-base font-semibold py-3.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40">
                 <span x-show="!verifying">Verify OTP</span>
                 <span x-show="verifying" x-cloak class="inline-flex items-center gap-2" role="status">
                     @include('partials.spinner') Verifying
@@ -229,7 +214,7 @@
                         ? 'border-brand text-brand cursor-wait'
                         : (codeExpired ? 'border-brand text-brand hover:bg-brand/5' : 'border-gray-200 text-gray-400 cursor-not-allowed')"
                     :aria-label="codeExpired ? 'Resend OTP' : `Resend OTP, available in ${countdown}`"
-                    class="mt-3 w-full flex items-center justify-between gap-3 bg-white border text-base font-medium px-5 py-3.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40">
+                    class="mt-3 w-full flex items-center justify-between gap-3 bg-white border text-base font-medium px-5 py-3.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40">
                 <span x-show="!resending">Resend OTP</span>
                 <span x-show="resending" x-cloak class="inline-flex items-center gap-2" role="status">
                     @include('partials.spinner', ['tone' => 'brand']) Sending

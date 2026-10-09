@@ -39,9 +39,10 @@
         [x-cloak]{ display:none!important; }
         html, body{ height: 100%; margin: 0; }
         body{ font-family: 'Poppins', system-ui, sans-serif; }
-        @keyframes letterIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
-        .letter-anim { display:inline-block; opacity:0; animation: letterIn 0.4s ease-out forwards; }
     </style>
+
+    {{-- Page-specific head tags, e.g. the login page preloading its background photo. --}}
+    @stack('head')
 </head>
 <body class="h-full">
 

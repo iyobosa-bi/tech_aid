@@ -3,7 +3,6 @@ function loginPage() {
         otpOpen: false,
         code: ['', '', '', '', '', ''],
         showPw: false,
-        revealed: false,
         verifying: false,
         resending: false,
         otpError: '',
@@ -37,8 +36,6 @@ function loginPage() {
             };
             this.emailDomain = (this.$el.dataset.emailDomain || '').toLowerCase();
             this.email = this.$el.dataset.oldEmail || '';
-
-            setTimeout(() => this.revealed = true, 100);
         },
 
         get emailError() {
