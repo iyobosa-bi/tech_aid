@@ -12,6 +12,15 @@ function loginPage() {
         loginError: '',
         routes: {},
 
+        // OTP countdown: seconds until the code expires. Resend unlocks at zero.
+        // Worked out from a fixed end time, so a slowed-down background tab still shows the truth.
+        secondsLeft: 0,
+        countdownEndsAt: 0,
+        countdownTimer: null,
+        defaultCodeLifetime: 60,
+        // True while counting down the resend limit's wait (429). The old code is already dead then.
+        waitingOutLimit: false,
+
         // Live validation. A field's error shows once it's "touched" — after a short pause
         // in typing, on leaving the field, or on submit — then updates on every keystroke.
         email: '',
@@ -88,11 +97,47 @@ function loginPage() {
         // Opens the OTP modal and moves the cursor into its first box. The password field
         // loses focus straight away. The page behind is made inert (x-effect in login.blade.php),
         // so it can't be clicked or tabbed back into.
-        openOtp() {
+        openOtp(expiresIn) {
             document.activeElement?.blur();
             this.code = ['', '', '', '', '', ''];
             this.otpOpen = true;
+            this.startCountdown(expiresIn);
             this.whenVisible(this.$refs.otpInputs, () => this.focusDigit(0));
+        },
+
+        startCountdown(seconds, waitingOutLimit = false) {
+            this.stopCountdown();
+            this.waitingOutLimit = waitingOutLimit;
+            const lifetime = Number(seconds) > 0 ? Number(seconds) : this.defaultCodeLifetime;
+            this.countdownEndsAt = Date.now() + lifetime * 1000;
+            this.tickCountdown();
+            this.countdownTimer = setInterval(() => this.tickCountdown(), 1000);
+        },
+
+        tickCountdown() {
+            this.secondsLeft = Math.max(0, Math.ceil((this.countdownEndsAt - Date.now()) / 1000));
+            if (this.secondsLeft === 0) this.stopCountdown();
+        },
+
+        stopCountdown() {
+            clearInterval(this.countdownTimer);
+            this.countdownTimer = null;
+        },
+
+        // "01:00", "00:31" — as in design/screenshots/otpmodal.JPG.
+        get countdown() {
+            const minutes = Math.floor(this.secondsLeft / 60);
+            const seconds = this.secondsLeft % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        },
+
+        // Resend unlocks (and Verify locks) only once the code has run out.
+        get codeExpired() {
+            return this.secondsLeft === 0;
+        },
+
+        get canVerify() {
+            return !this.codeExpired && !this.waitingOutLimit;
         },
 
         // x-show reveals an element one animation frame *after* the state changes, and
@@ -158,7 +203,7 @@ function loginPage() {
 
                 this.logDebugCode(data);
                 this.loginError = '';
-                this.openOtp();
+                this.openOtp(data.expires_in);
             } catch (e) {
                 this.loginError = 'Something went wrong. Please try again.';
             } finally {
@@ -183,6 +228,8 @@ function loginPage() {
         },
 
         async verify() {
+            if (!this.canVerify || this.verifying) return;
+
             this.otpError = '';
             this.resendMessage = '';
             this.verifying = true;
@@ -215,6 +262,8 @@ function loginPage() {
         },
 
         async resend() {
+            if (!this.codeExpired || this.resending) return;
+
             this.otpError = '';
             this.resendMessage = '';
             this.resending = true;
@@ -228,6 +277,16 @@ function loginPage() {
                         'X-CSRF-TOKEN': this.csrfToken(),
                     },
                 });
+
+                // Over the limit (3 resends per 10 minutes): count down the server's wait instead.
+                if (response.status === 429) {
+                    const wait = Number(response.headers.get('Retry-After')) || 60;
+                    const minutes = Math.ceil(wait / 60);
+                    this.otpError = `Too many codes requested. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`;
+                    this.startCountdown(wait, true);
+                    return;
+                }
+
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -236,7 +295,11 @@ function loginPage() {
                 }
 
                 this.logDebugCode(data);
-                this.resendMessage = data.message || 'A new code has been sent.';
+                this.resendMessage = data.message || 'A new code has been sent to your email.';
+                // The old code is dead now, so start over in the first box.
+                this.code = ['', '', '', '', '', ''];
+                this.startCountdown(data.expires_in);
+                this.whenVisible(this.$refs.otpInputs, () => this.focusDigit(0));
             } catch (e) {
                 this.otpError = 'Something went wrong. Please try again.';
             } finally {
@@ -256,6 +319,8 @@ function loginPage() {
                 });
             } finally {
                 this.otpOpen = false;
+                this.stopCountdown();
+                this.secondsLeft = 0;
                 this.code = ['', '', '', '', '', ''];
                 this.otpError = '';
                 this.resendMessage = '';

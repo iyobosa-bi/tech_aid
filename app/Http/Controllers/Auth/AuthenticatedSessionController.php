@@ -18,6 +18,12 @@ use Illuminate\View\View;
 class AuthenticatedSessionController extends Controller
 {
     /**
+     * How long an emailed code stays valid. The OTP modal counts this down and
+     * only unlocks "Resend OTP" once it reaches zero.
+     */
+    public const OTP_LIFETIME_SECONDS = 60;
+
+    /**
      * Display the login view.
      *
      * The OTP modal only auto-opens for the single response immediately
@@ -145,7 +151,7 @@ class AuthenticatedSessionController extends Controller
         $code = $this->issueOtp(User::findOrFail($userId));
 
         return $this->otpResponse([
-            'message' => 'A new code has been sent.',
+            'message' => 'A new code has been sent to your email.',
         ], $code);
     }
 
@@ -188,7 +194,7 @@ class AuthenticatedSessionController extends Controller
         OtpCode::create([
             'user_id' => $user->id,
             'code' => Hash::make($code),
-            'expires_at' => now()->addMinutes(1),
+            'expires_at' => now()->addSeconds(self::OTP_LIFETIME_SECONDS),
         ]);
 
         $user->notify(new LoginOtpCode($code));
@@ -217,7 +223,10 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Local-dev convenience: expose the plain code so the login page can
+     * Every response that issues a code tells the modal how many seconds it
+     * stays valid (`expires_in`), so its countdown matches the server.
+     *
+     * Local-dev convenience: also expose the plain code so the login page can
      * console.log it instead of digging through the mail log. Requires BOTH
      * APP_ENV=local and APP_DEBUG=true, so it can never reach production.
      *
@@ -225,6 +234,8 @@ class AuthenticatedSessionController extends Controller
      */
     private function otpResponse(array $payload, string $code): JsonResponse
     {
+        $payload['expires_in'] = self::OTP_LIFETIME_SECONDS;
+
         if (app()->isLocal() && config('app.debug')) {
             $payload['debug_code'] = $code;
         }

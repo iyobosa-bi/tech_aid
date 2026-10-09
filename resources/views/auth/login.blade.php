@@ -173,16 +173,24 @@
         </div>
     </div>
 
-    <!-- OTP MODAL -->
-    <div x-show="otpOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-         role="dialog" aria-modal="true" aria-labelledby="otp-title">
-        <div class="w-full max-w-sm bg-white rounded-xl shadow-2xl p-6">
-            <div class="flex items-center justify-between mb-1">
-                <h3 id="otp-title" class="font-display font-bold text-lg text-brand">Verify your identity</h3>
-            </div>
-            <p class="text-sm text-gray-500 mb-6">Enter the 6-digit code sent to your email.</p>
+    <!-- OTP MODAL (design/screenshots/otpmodal.JPG) -->
+    <div x-show="otpOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto"
+         role="dialog" aria-modal="true" aria-labelledby="otp-title" aria-describedby="otp-intro">
+        <div class="relative w-full max-w-[35rem] bg-white rounded-2xl shadow-2xl p-6 sm:p-10 my-auto">
+            {{-- Closing cancels the pending login (and its code), back to the sign-in form. --}}
+            <button type="button" @click="cancel()" aria-label="Close and sign in again"
+                    class="absolute top-4 right-4 sm:top-6 sm:right-6 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
 
-            <div class="flex gap-2 justify-between mb-8" x-ref="otpInputs">
+            <h3 id="otp-title" class="font-display font-bold text-xl sm:text-2xl text-brand pr-10">OTP Verification</h3>
+            <p id="otp-intro" class="mt-3 text-sm sm:text-base text-gray-500 leading-relaxed">
+                Enter the 6-digit code sent to <strong class="font-semibold text-gray-700 break-words" x-text="email.trim()"></strong>.
+            </p>
+
+            <p class="mt-8 sm:mt-10 text-center text-sm text-gray-500">Step 2 of 2: Verify your account</p>
+
+            <div class="mt-6 sm:mt-8 grid grid-cols-6 gap-2 sm:gap-3 max-w-[27rem] mx-auto" x-ref="otpInputs">
                 <template x-for="(digit, i) in code" :key="i">
                     <input
                         type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="1"
@@ -190,37 +198,48 @@
                         @input="onDigitInput(i, $event)"
                         @keydown="onDigitKeydown(i, $event)"
                         :aria-label="`Digit ${i + 1} of 6`"
-                        class="w-11 sm:w-12 h-14 text-center text-xl font-semibold rounded-lg border border-gray-200
+                        class="w-full min-w-0 h-14 sm:h-16 text-center text-xl sm:text-2xl font-semibold rounded-xl border border-gray-300
                                text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                     />
                 </template>
             </div>
 
-            {{-- Pulled up under the boxes so the message reads as theirs, still clear of the Verify button. --}}
-            <p x-show="otpError" x-cloak x-text="otpError" class="-mt-4 mb-4 text-xs text-red-600 text-center" role="alert"></p>
-            <p x-show="resendMessage" x-cloak x-text="resendMessage" class="-mt-4 mb-4 text-xs text-teal-600 text-center" role="status"></p>
+            <p x-show="otpError" x-cloak x-text="otpError" class="mt-4 text-sm text-red-600 text-center" role="alert"></p>
 
-            <button type="button" @click="verify()" :disabled="verifying"
-                    class="w-full inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark disabled:opacity-80 disabled:cursor-wait text-white text-sm font-semibold py-2.5 rounded-lg transition-colors mb-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40">
-                <span x-show="!verifying">Verify</span>
+            {{-- Counting down: when Resend unlocks. At zero: the code is dead, so say so (announced once). --}}
+            <p x-show="!codeExpired" class="mt-8 text-center text-sm text-gray-500">
+                You can resend OTP in <strong class="font-semibold text-gray-700 tabular-nums" x-text="countdown"></strong>
+            </p>
+            <p x-show="codeExpired" x-cloak class="mt-8 text-center text-sm text-gray-500" role="status">
+                Your code has expired. Request a new one below.
+            </p>
+
+            <button type="button" @click="verify()" :disabled="verifying || !canVerify"
+                    :class="verifying ? 'cursor-wait opacity-80' : (canVerify ? '' : 'cursor-not-allowed opacity-50')"
+                    class="mt-6 w-full inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark disabled:hover:bg-brand text-white text-base font-semibold py-3.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40">
+                <span x-show="!verifying">Verify OTP</span>
                 <span x-show="verifying" x-cloak class="inline-flex items-center gap-2" role="status">
                     @include('partials.spinner') Verifying
                 </span>
             </button>
 
-            <p class="text-xs text-center text-gray-400">
-                Didn't get a code?
-                <button type="button" @click="resend()" :disabled="resending" class="text-blue-600 font-medium disabled:opacity-60">
-                    <span x-show="!resending">Resend</span>
-                    <span x-show="resending" x-cloak class="inline-flex items-center gap-1.5 align-middle" role="status">
-                        @include('partials.spinner', ['tone' => 'brand', 'size' => 'sm']) Sending
-                    </span>
-                </button>
-            </p>
+            {{-- Locked (gray) while the code is still valid; brand blue once it has expired. --}}
+            <button type="button" @click="resend()" :disabled="!codeExpired || resending"
+                    :class="resending
+                        ? 'border-brand text-brand cursor-wait'
+                        : (codeExpired ? 'border-brand text-brand hover:bg-brand/5' : 'border-gray-200 text-gray-400 cursor-not-allowed')"
+                    :aria-label="codeExpired ? 'Resend OTP' : `Resend OTP, available in ${countdown}`"
+                    class="mt-3 w-full flex items-center justify-between gap-3 bg-white border text-base font-medium px-5 py-3.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand/40">
+                <span x-show="!resending">Resend OTP</span>
+                <span x-show="resending" x-cloak class="inline-flex items-center gap-2" role="status">
+                    @include('partials.spinner', ['tone' => 'brand']) Sending
+                </span>
+                <span x-show="!codeExpired" class="text-sm text-gray-400 tabular-nums" x-text="countdown" aria-hidden="true"></span>
+                <span x-show="codeExpired && !resending" x-cloak aria-hidden="true"><i data-lucide="rotate-cw" class="w-4 h-4"></i></span>
+            </button>
 
-            <p class="text-xs text-center text-gray-300 mt-3">
-                <button type="button" @click="cancel()" class="underline hover:text-gray-500">Use a different account</button>
-            </p>
+            {{-- Always takes up its line, so the card doesn't jump when the message appears. --}}
+            <p x-text="resendMessage" class="mt-8 min-h-[1.25rem] text-center text-sm text-gray-500" role="status" aria-live="polite"></p>
         </div>
     </div>
 </div>
