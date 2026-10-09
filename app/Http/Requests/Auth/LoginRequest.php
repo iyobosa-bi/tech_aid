@@ -62,6 +62,15 @@ class LoginRequest extends FormRequest
 
         $user = User::where('email', $this->string('email'))->firstOrFail();
 
+        // Switched off by an Admin. Only said after the right password, so it reveals nothing to a guesser.
+        if (! $user->isActive()) {
+            $this->logFailedLogin('deactivated');
+
+            throw ValidationException::withMessages([
+                'email' => 'This account has been deactivated. Please contact your administrator.',
+            ]);
+        }
+
         // Step 1 of 2: the password checked out. The session itself starts at "OTP verified".
         Log::channel('activity')->info('Login succeeded', [
             'user_id' => $user->id,

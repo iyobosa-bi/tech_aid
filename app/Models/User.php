@@ -6,6 +6,7 @@ namespace App\Models;
 use App\Enums\PermissionName;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,7 +35,23 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'on_leave' => 'boolean',
+            'deactivated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Deactivated by an Admin (reversible): can't sign in, signed out on their next request,
+     * never offered for assignment. Deleting is separate — a soft delete (SoftDeletes).
+     * deactivated_at is not mass-assignable; UserRepository::setActive() sets it.
+     */
+    public function isActive(): bool
+    {
+        return $this->deactivated_at === null;
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereNull('deactivated_at');
     }
 
     public function otpCodes(): HasMany

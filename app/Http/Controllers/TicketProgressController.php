@@ -6,7 +6,6 @@ use App\Models\Ticket;
 use App\Services\TicketService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-
 /**
  * Flow 7: the assigned Application Support person starts work (assigned → in_progress).
  * TicketPolicy::startProgress makes sure it's their ticket.

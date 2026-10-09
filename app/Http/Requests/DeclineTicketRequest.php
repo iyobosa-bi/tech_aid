@@ -13,7 +13,6 @@ class DeclineTicketRequest extends FormRequest
     {
         return Gate::inspect('decline', $this->route('ticket'));
     }
-
     /**
      * Flow 3: a decline must say why — the comment goes to the requester.
      *
@@ -25,7 +24,6 @@ class DeclineTicketRequest extends FormRequest
             'comment' => ['required', 'string', 'min:5', 'max:1000'],
         ];
     }
-
     /**
      * @return array<string, string>
      */

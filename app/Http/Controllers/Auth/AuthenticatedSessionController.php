@@ -2,26 +2,23 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\OtpCheck;
+use App\Enums\OtpPurpose;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\OtpCode;
 use App\Models\User;
 use App\Notifications\LoginOtpCode;
+use App\Services\OtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    /**
-     * How long an emailed code stays valid. The OTP modal counts this down and
-     * only unlocks "Resend OTP" once it reaches zero.
-     */
-    public const OTP_LIFETIME_SECONDS = 60;
+    public function __construct(private readonly OtpService $otps) {}
 
     /**
      * Display the login view.
@@ -61,23 +58,18 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): JsonResponse
     {
-        
         $this->clearPendingOtp($request);
 
         $user = $request->authenticate();
-        
+
         $code = $this->issueOtp($user);
 
         $request->session()->put('login.otp.user_id', $user->id);
-        // $request->session()->flash('otp_pending', true);
 
-        // return redirect()->route('login');
         return $this->otpResponse([
             'success' => true,
             'otp_pending' => true,
         ], $code);
-
-
     }
 
     /**
@@ -90,8 +82,10 @@ class AuthenticatedSessionController extends Controller
         ]);
 
         $userId = $request->session()->get('login.otp.user_id');
+        // Deleted or deactivated since the password step: treat it like an expired login.
+        $user = $userId ? User::active()->find($userId) : null;
 
-        if (! $userId) {
+        if (! $user) {
             $this->logFailedOtp($request, 'session_expired');
 
             return response()->json([
@@ -99,24 +93,16 @@ class AuthenticatedSessionController extends Controller
             ], 419);
         }
 
-        $otp = OtpCode::query()
-            ->where('user_id', $userId)
-            ->whereNull('used_at')
-            ->where('expires_at', '>', now())
-            ->latest('id')
-            ->first();
+        $check = $this->otps->verify($user, OtpPurpose::Login, (string) $request->string('code'));
 
-        if (! $otp || ! Hash::check($request->string('code'), $otp->code)) {
-            $this->logFailedOtp($request, $otp ? 'wrong_code' : 'no_active_code', User::find($userId));
+        if (! $check->passed()) {
+            $this->logFailedOtp($request, $check->value, $user);
 
-            return response()->json([
-                'message' => 'Invalid or expired code.',
-            ], 422);
+            // After too many wrong tries the code is dead: the modal unlocks "Resend OTP" straight away.
+            return $check === OtpCheck::TooManyAttempts
+                ? response()->json(['message' => 'Too many wrong codes. Please request a new one.', 'code_expired' => true], 422)
+                : response()->json(['message' => 'Invalid or expired code.'], 422);
         }
-
-        $otp->update(['used_at' => now()]);
-
-        $user = User::findOrFail($userId);
 
         Auth::login($user);
         $request->session()->forget('login.otp.user_id');
@@ -130,8 +116,6 @@ class AuthenticatedSessionController extends Controller
         return response()->json([
             'redirect' => route('dashboard'),
         ]);
-
-
     }
 
     /**
@@ -141,14 +125,15 @@ class AuthenticatedSessionController extends Controller
     public function resendOtp(Request $request): JsonResponse
     {
         $userId = $request->session()->get('login.otp.user_id');
+        $user = $userId ? User::active()->find($userId) : null;
 
-        if (!$userId) {
+        if (! $user) {
             return response()->json([
                 'message' => 'Your session has expired. Please log in again.',
             ], 419);
         }
 
-        $code = $this->issueOtp(User::findOrFail($userId));
+        $code = $this->issueOtp($user);
 
         return $this->otpResponse([
             'message' => 'A new code has been sent to your email.',
@@ -181,21 +166,13 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Invalidate any outstanding codes, generate a new one, and email it.
+     * Cancel any outstanding login codes, generate a new one, and email it.
      * The database stores only a hash (docs/06-data-model.md); the plain code
      * lives in the queued notification and, in local dev only, otpResponse().
      */
     private function issueOtp(User $user): string
     {
-        OtpCode::where('user_id', $user->id)->whereNull('used_at')->update(['used_at' => now()]);
-         
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-        OtpCode::create([
-            'user_id' => $user->id,
-            'code' => Hash::make($code),
-            'expires_at' => now()->addSeconds(self::OTP_LIFETIME_SECONDS),
-        ]);
+        $code = $this->otps->issue($user, OtpPurpose::Login);
 
         $user->notify(new LoginOtpCode($code));
 
@@ -234,7 +211,7 @@ class AuthenticatedSessionController extends Controller
      */
     private function otpResponse(array $payload, string $code): JsonResponse
     {
-        $payload['expires_in'] = self::OTP_LIFETIME_SECONDS;
+        $payload['expires_in'] = OtpPurpose::Login->lifetimeSeconds();
 
         if (app()->isLocal() && config('app.debug')) {
             $payload['debug_code'] = $code;
@@ -253,9 +230,10 @@ class AuthenticatedSessionController extends Controller
     private function clearPendingOtp(Request $request): void
     {
         $previousUserId = $request->session()->pull('login.otp.user_id');
+        $previous = $previousUserId ? User::withTrashed()->find($previousUserId) : null;
 
-        if ($previousUserId) {
-            OtpCode::where('user_id', $previousUserId)->whereNull('used_at')->update(['used_at' => now()]);
+        if ($previous) {
+            $this->otps->invalidate($previous, OtpPurpose::Login);
         }
     }
 }

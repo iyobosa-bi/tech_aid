@@ -34,6 +34,16 @@ class UserFactory extends Factory
     }
 
     /**
+     * Switched off by an Admin: can't sign in.
+     */
+    public function deactivated(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'deactivated_at' => now(),
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static

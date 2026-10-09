@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureAccountIsActive;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,7 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->web(append: [
+            // Each session remembers the password it signed in with; once the password changes
+            // (forgot-password reset, or Settings), every other session is signed out.
+            AuthenticateSession::class,
+            // An Admin deactivated the account: signed out on the next request.
+            EnsureAccountIsActive::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $wantsJson = fn (Request $request) => $request->is('api/*') || $request->expectsJson();
