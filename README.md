@@ -45,8 +45,6 @@ resolution chain:
 | File storage | Local disk in development; S3 planned for production |
 | Tests | Pest |
 
-Why each choice was made: [docs/04-tech-stack.md](docs/04-tech-stack.md).
-
 ---
 
 ## Setup
@@ -126,7 +124,7 @@ code) is written to `storage/logs/laravel.log` once the queue worker has sent it
 
 ---
 
-## Tests
+## Test
 
 ```bash
 php artisan test

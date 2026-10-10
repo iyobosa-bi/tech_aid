@@ -59,7 +59,7 @@
                                 id="email" name="email" type="email" required autofocus autocomplete="username"
                                 placeholder="Email"
                                 x-ref="emailInput" x-model="email"
-                                @input.debounce.500ms="touched.email = true" @blur="touched.email = true"
+                                @input.debounce.500ms="touched.email = true" @blur="if (email) touched.email = true"
                                 :aria-invalid="emailInvalid.toString()" aria-describedby="email-error"
                                 class="w-full pl-11 pr-3 py-3 rounded-lg border text-gray-800 text-base placeholder:text-gray-400
                                        focus:outline-none focus:ring-2"
@@ -78,7 +78,9 @@
                     <div>
                         <div class="flex items-baseline justify-between gap-3 mb-2">
                             <label for="password" class="font-display font-semibold text-brand text-sm">Password</label>
-                            <a href="{{ route('password.request') }}" class="text-sm font-medium text-brand hover:text-brand-dark hover:underline underline-offset-2">Forgot password?</a>
+                            {{-- mousedown.prevent: clicking the link doesn't take focus from the field being typed in,
+                                 so that field isn't checked (and painted red) on the way out. --}}
+                            <a href="{{ route('password.request') }}" @mousedown.prevent class="text-sm font-medium text-brand hover:text-brand-dark hover:underline underline-offset-2">Forgot password?</a>
                         </div>
                         <div class="relative">
                             <i data-lucide="lock" class="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2"
@@ -87,7 +89,7 @@
                                 :type="showPw ? 'text' : 'password'"
                                 id="password" name="password" required placeholder="Password" autocomplete="current-password"
                                 x-ref="passwordInput" x-model="password"
-                                @input.debounce.500ms="touched.password = true" @blur="touched.password = true"
+                                @input.debounce.500ms="touched.password = true" @blur="if (password) touched.password = true"
                                 :aria-invalid="passwordInvalid.toString()" aria-describedby="password-error"
                                 class="w-full pl-11 pr-11 py-3 rounded-lg border text-gray-800 text-base placeholder:text-gray-400
                                        focus:outline-none focus:ring-2"

@@ -21,7 +21,9 @@ function loginPage() {
         waitingOutLimit: false,
 
         // Live validation. A field's error shows once it's "touched" — after a short pause
-        // in typing, on leaving the field, or on submit — then updates on every keystroke.
+        // in typing, on leaving the field with something in it, or on submit — then updates on
+        // every keystroke. Leaving an empty field doesn't count: the email box is focused on page
+        // load, so any click (e.g. "Forgot password?") would otherwise flag it as "required".
         email: '',
         password: '',
         touched: { email: false, password: false },

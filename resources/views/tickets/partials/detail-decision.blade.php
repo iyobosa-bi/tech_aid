@@ -96,7 +96,7 @@
 
                 <label for="decline-comment" class="block text-sm font-medium text-gray-700 mt-5 mb-1.5">Comment <span class="text-red-500">*</span></label>
                 <textarea id="decline-comment" name="comment" rows="4" maxlength="1000"
-                          x-ref="declineComment" x-model="comment" @input="serverError = ''" @blur="touched = true"
+                          x-ref="declineComment" x-model="comment" @input="serverError = ''" @blur="if (comment) touched = true"
                           placeholder="e.g. Please attach a screenshot of the error and the customer's account number."
                           :aria-invalid="(!!shownError).toString()" aria-describedby="decline-comment-error"
                           class="w-full px-3.5 py-2.5 rounded-lg border text-sm text-gray-900 placeholder:text-gray-400 resize-y focus:outline-none focus:ring-2"
